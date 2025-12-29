@@ -79,8 +79,7 @@ export async function getUserInfo(token: string): Promise<{ anlas: AnlasInfo } |
     try {
         const trimmedToken = token.trim()
 
-        // In production, use Rust backend to avoid CORS
-        if (!import.meta.env.DEV) {
+        try {
             const { invoke } = await import('@tauri-apps/api/core')
             const result = await invoke<{ success: boolean; fixed?: number; purchased?: number; error?: string }>('get_anlas_balance', { token: trimmedToken })
 
@@ -96,30 +95,9 @@ export async function getUserInfo(token: string): Promise<{ anlas: AnlasInfo } |
                 }
             }
             return null
-        }
-
-        // Development mode - use native fetch
-        const response = await CLIENT_FETCH(API_ENDPOINTS.SUBSCRIPTION, {
-            headers: {
-                ...DEFAULT_HEADERS,
-                'Authorization': `Bearer ${trimmedToken}`,
-            },
-        })
-
-        if (!response.ok) {
+        } catch (e) {
+            console.error('getUserInfo invalid invoke:', e)
             return null
-        }
-
-        const data = await response.json()
-        const fixed = data.trainingStepsLeft?.fixedTrainingStepsLeft || 0
-        const purchased = data.trainingStepsLeft?.purchasedTrainingSteps || 0
-
-        return {
-            anlas: {
-                fixed,
-                purchased,
-                total: fixed + purchased,
-            }
         }
     } catch (error) {
         console.error('getUserInfo error:', error)
@@ -142,8 +120,7 @@ export async function verifyToken(token: string): Promise<{
     try {
         const trimmedToken = token.trim()
 
-        // In production, use Tauri Rust backend to avoid CORS issues
-        if (!import.meta.env.DEV) {
+        try {
             console.log('[TokenVerify] Using Rust backend via invoke...')
             const { invoke } = await import('@tauri-apps/api/core')
             const result = await invoke<{ valid: boolean; tier?: string; error?: string }>('verify_token', { token: trimmedToken })
@@ -153,38 +130,10 @@ export async function verifyToken(token: string): Promise<{
                 return { valid: true, tier: result.tier as 'paper' | 'tablet' | 'scroll' | 'opus' }
             }
             return { valid: false, error: result.error || '인증 실패' }
+        } catch (e) {
+            console.error('[TokenVerify] Rust invoke failed:', e)
+            return { valid: false, error: `Rust 통신 오류: ${e}` }
         }
-
-        // In development, use native fetch (works because of localhost)
-        console.log('[TokenVerify] Calling fetch to:', API_ENDPOINTS.SUBSCRIPTION)
-        const response = await CLIENT_FETCH(API_ENDPOINTS.SUBSCRIPTION, {
-            headers: {
-                ...DEFAULT_HEADERS,
-                'Authorization': `Bearer ${trimmedToken}`,
-            },
-        })
-
-        console.log('[TokenVerify] Response received. Status:', response.status)
-
-        if (!response.ok) {
-            console.warn('[TokenVerify] Response not OK:', response.status, response.statusText)
-            if (response.status === 401) {
-                return { valid: false, error: '유효하지 않은 API 토큰' }
-            }
-            return { valid: false, error: `API 오류: ${response.status}` }
-        }
-
-        const data = await response.json()
-        console.log('[TokenVerify] Response JSON parsed:', data)
-
-        // Determine tier from subscription data
-        let tier: 'paper' | 'tablet' | 'scroll' | 'opus' = 'paper'
-        if (data.tier === 3) tier = 'opus'
-        else if (data.tier === 2) tier = 'scroll'
-        else if (data.tier === 1) tier = 'tablet'
-
-        console.log('[TokenVerify] Success. Tier:', tier)
-        return { valid: true, tier }
     } catch (error) {
         console.error('[TokenVerify] CRITICAL ERROR:', error)
         console.error('[TokenVerify] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
@@ -204,8 +153,7 @@ export async function getAnlasBalance(token: string): Promise<{
     try {
         const trimmedToken = token.trim()
 
-        // In production, use Rust backend to avoid CORS
-        if (!import.meta.env.DEV) {
+        try {
             const { invoke } = await import('@tauri-apps/api/core')
             const result = await invoke<{ success: boolean; fixed?: number; purchased?: number; error?: string }>('get_anlas_balance', { token: trimmedToken })
 
@@ -215,28 +163,8 @@ export async function getAnlasBalance(token: string): Promise<{
                 purchasedTrainingSteps: result.purchased,
                 error: result.error,
             }
-        }
-
-        // Development mode - use native fetch
-        const response = await CLIENT_FETCH(API_ENDPOINTS.SUBSCRIPTION, {
-            headers: {
-                ...DEFAULT_HEADERS,
-                'Authorization': `Bearer ${trimmedToken}`,
-            },
-        })
-
-        if (!response.ok) {
-            return { success: false, error: `API 오류: ${response.status}` }
-        }
-
-        const data = await response.json()
-        const fixedTrainingStepsLeft = data.trainingStepsLeft?.fixedTrainingStepsLeft || 0
-        const purchasedTrainingSteps = data.trainingStepsLeft?.purchasedTrainingSteps || 0
-
-        return {
-            success: true,
-            fixedTrainingStepsLeft,
-            purchasedTrainingSteps,
+        } catch (e) {
+            return { success: false, error: `Rust invoke failed: ${e}` }
         }
     } catch (error) {
         console.error('Anlas balance error:', error)
@@ -522,7 +450,7 @@ export async function generateImage(
                     apiParameters.v4_prompt.caption.char_captions.push({
                         char_caption: char.prompt,
                         // 위치 활성화되었을 때만 position 사용, 아니면 중앙(0.5, 0.5)
-                        centers: usePositions 
+                        centers: usePositions
                             ? [{ x: char.position.x, y: char.position.y }]
                             : [{ x: 0.5, y: 0.5 }]
                     })
@@ -714,8 +642,7 @@ export async function upscaleImage(
     try {
         const rawBase64 = stripBase64Header(imageBase64)
 
-        // In production, use Rust backend to avoid CORS
-        if (!import.meta.env.DEV) {
+        try {
             console.log('[Upscale] Using Rust backend via invoke...')
             const { invoke } = await import('@tauri-apps/api/core')
             const result = await invoke<{ success: boolean; image_data?: string; error?: string }>('upscale_image', {
@@ -732,42 +659,9 @@ export async function upscaleImage(
                 imageData: result.image_data,
                 error: result.error,
             }
+        } catch (e) {
+            return { success: false, error: `Rust invoke failed: ${e}` }
         }
-
-        // Development mode - use native fetch
-        const payload = {
-            image: rawBase64,
-            width: width,
-            height: height,
-            scale: scale
-        }
-
-        const response = await CLIENT_FETCH('https://api.novelai.net/ai/upscale', {
-            method: 'POST',
-            headers: {
-                ...DEFAULT_HEADERS,
-                'Authorization': `Bearer ${token.trim()}`,
-            },
-            body: JSON.stringify(payload)
-        })
-
-        if (!response.ok) {
-            const errorText = await response.text()
-            throw new Error(`Upscale failed: ${response.status} - ${errorText}`)
-        }
-
-        // Response is a ZIP file containing the upscaled image
-        const arrayBuffer = await response.arrayBuffer()
-        const zip = await JSZip.loadAsync(arrayBuffer)
-
-        const filename = Object.keys(zip.files)[0]
-        const file = zip.file(filename)
-        if (!file) {
-            throw new Error("ZIP 파일에서 이미지를 읽을 수 없습니다.")
-        }
-
-        const base64 = await file.async('base64')
-        return { success: true, imageData: base64 }
     } catch (error) {
         console.error('Upscale error:', error)
         return { success: false, error: `업스케일 오류: ${error}` }
@@ -919,7 +813,7 @@ export async function generateImageStream(
                     apiParameters.v4_prompt.caption.char_captions.push({
                         char_caption: char.prompt,
                         // 위치 활성화되었을 때만 position 사용, 아니면 중앙(0.5, 0.5)
-                        centers: usePositions 
+                        centers: usePositions
                             ? [{ x: char.position.x, y: char.position.y }]
                             : [{ x: 0.5, y: 0.5 }]
                     })

@@ -61,7 +61,7 @@ export default {
     		},
     		fontFamily: {
     			sans: [
-    				'Pretendard Variable"',
+    				'Pretendard Variable',
     				'Pretendard',
     				'Inter',
     				'-apple-system',

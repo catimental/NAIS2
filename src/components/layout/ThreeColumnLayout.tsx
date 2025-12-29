@@ -19,6 +19,8 @@ import {
     Coins,
     Wand2,
     Zap,
+    PanelLeft,
+    PanelRight,
 } from 'lucide-react'
 
 interface ThreeColumnLayoutProps {
@@ -30,11 +32,15 @@ import { useCharacterStore } from '@/stores/character-store'
 import { usePresetStore } from '@/stores/preset-store'
 import { useLayoutStore } from '@/stores/layout-store'
 
+// Check if running on Mac (works in browser and Tauri WebView)
+const isMac = navigator.platform.toUpperCase().includes('MAC') ||
+    navigator.userAgent.toUpperCase().includes('MAC')
+
 export function ThreeColumnLayout({ children }: ThreeColumnLayoutProps) {
     const { t } = useTranslation()
     const location = useLocation()
     const { anlas, isVerified, refreshAnlas } = useAuthStore()
-    const { leftSidebarVisible, rightSidebarVisible } = useLayoutStore()
+    const { leftSidebarVisible, rightSidebarVisible, toggleLeftSidebar, toggleRightSidebar } = useLayoutStore()
 
     // Get generation params for cost calculation
     const { characterImages, vibeImages } = useCharacterStore()
@@ -89,8 +95,8 @@ export function ThreeColumnLayout({ children }: ThreeColumnLayoutProps) {
 
     return (
         <div className="flex flex-col h-screen bg-background overflow-hidden">
-            {/* Custom Title Bar */}
-            <CustomTitleBar />
+            {/* Custom Title Bar - Only show on Windows (Mac uses native decorations) */}
+            {!isMac && <CustomTitleBar />}
 
             {/* Main Layout */}
             <div className="flex flex-1 p-3 gap-3 overflow-hidden">
@@ -149,7 +155,21 @@ export function ThreeColumnLayout({ children }: ThreeColumnLayoutProps) {
                 {/* Center Panel - Page Content (Rounded Box) */}
                 <div className="flex-1 flex flex-col min-w-0 bg-card/30 backdrop-blur-sm rounded-2xl border border-border/50 overflow-hidden shadow-lg">
                     {/* Tab Navigation (Glass Surface) */}
-                    <div className="shrink-0 flex justify-center py-3 z-10">
+                    <div className="shrink-0 flex items-center justify-center py-3 z-10 gap-2">
+                        {/* Mac: Left sidebar toggle */}
+                        {isMac && (
+                            <button
+                                onClick={toggleLeftSidebar}
+                                className={cn(
+                                    "p-1.5 rounded-full transition-colors",
+                                    "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                                    !leftSidebarVisible && "opacity-50"
+                                )}
+                                title="Toggle Left Sidebar"
+                            >
+                                <PanelLeft className="h-4 w-4" />
+                            </button>
+                        )}
                         <GlassSurface
                             width="fit-content"
                             height={52}
@@ -161,6 +181,20 @@ export function ThreeColumnLayout({ children }: ThreeColumnLayoutProps) {
                         >
                             <AnimatedNavBar items={navItems} />
                         </GlassSurface>
+                        {/* Mac: Right sidebar toggle */}
+                        {isMac && (
+                            <button
+                                onClick={toggleRightSidebar}
+                                className={cn(
+                                    "p-1.5 rounded-full transition-colors",
+                                    "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                                    !rightSidebarVisible && "opacity-50"
+                                )}
+                                title="Toggle Right Sidebar"
+                            >
+                                <PanelRight className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
 
                     {/* Page Content */}

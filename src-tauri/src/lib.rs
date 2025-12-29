@@ -34,9 +34,23 @@ struct TrainingSteps {
 async fn verify_token(token: String) -> VerifyTokenResult {
     let client = reqwest::Client::new();
 
+    let trimmed_token = token.trim();
+    // Remove "Bearer " prefix if user pasted it
+    let clean_token = if trimmed_token.to_lowercase().starts_with("bearer ") {
+        &trimmed_token[7..]
+    } else {
+        trimmed_token
+    };
+
+    println!(
+        "[VerifyToken] Checking token (length: {})",
+        clean_token.len()
+    );
+    println!("[VerifyToken] Token start: {:.5}...", clean_token);
+
     let result = client
         .get("https://api.novelai.net/user/subscription")
-        .header("Authorization", format!("Bearer {}", token.trim()))
+        .header("Authorization", format!("Bearer {}", clean_token))
         .header("Content-Type", "application/json")
         .send()
         .await;
@@ -44,9 +58,12 @@ async fn verify_token(token: String) -> VerifyTokenResult {
     match result {
         Ok(response) => {
             let status = response.status();
+            println!("[VerifyToken] API Response Status: {}", status);
+
             if status.is_success() {
                 match response.json::<SubscriptionResponse>().await {
                     Ok(data) => {
+                        println!("[VerifyToken] Success! Tier data: {:?}", data.tier);
                         let tier_name = match data.tier {
                             Some(3) => Some("opus".to_string()),
                             Some(2) => Some("scroll".to_string()),
@@ -59,31 +76,40 @@ async fn verify_token(token: String) -> VerifyTokenResult {
                             error: None,
                         }
                     }
-                    Err(e) => VerifyTokenResult {
-                        valid: false,
-                        tier: None,
-                        error: Some(format!("JSON 파싱 오류: {}", e)),
-                    },
+                    Err(e) => {
+                        println!("[VerifyToken] JSON Parse Error: {}", e);
+                        VerifyTokenResult {
+                            valid: false,
+                            tier: None,
+                            error: Some(format!("JSON 파싱 오류: {}", e)),
+                        }
+                    }
                 }
             } else if status.as_u16() == 401 {
+                println!("[VerifyToken] 401 Unauthorized");
                 VerifyTokenResult {
                     valid: false,
                     tier: None,
                     error: Some("유효하지 않은 API 토큰".to_string()),
                 }
             } else {
+                let error_text = response.text().await.unwrap_or_default();
+                println!("[VerifyToken] API Error: {} - {}", status, error_text);
                 VerifyTokenResult {
                     valid: false,
                     tier: None,
-                    error: Some(format!("API 오류: {}", status.as_u16())),
+                    error: Some(format!("API 오류: {} ({})", status.as_u16(), error_text)),
                 }
             }
         }
-        Err(e) => VerifyTokenResult {
-            valid: false,
-            tier: None,
-            error: Some(format!("네트워크 오류: {}", e)),
-        },
+        Err(e) => {
+            println!("[VerifyToken] Network Error: {}", e);
+            VerifyTokenResult {
+                valid: false,
+                tier: None,
+                error: Some(format!("네트워크 오류: {}", e)),
+            }
+        }
     }
 }
 
@@ -594,6 +620,15 @@ pub fn run() {
                         .level(log::LevelFilter::Info)
                         .build(),
                 )?;
+            }
+
+            // Mac: Enable decorations for better performance
+            // Windows: Disable decorations for custom titlebar
+            #[cfg(target_os = "macos")]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_decorations(true);
+                }
             }
 
             // Auto-start tagger sidecar
