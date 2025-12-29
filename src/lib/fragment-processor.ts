@@ -1,15 +1,15 @@
-import { useWildcardStore, normalizeWildcardPath } from '@/stores/wildcard-store'
+import { useFragmentStore, normalizeFragmentPath } from '@/stores/fragment-store'
 
 /**
- * Wildcard Processor
- * 프롬프트에서 와일드카드를 랜덤 선택으로 치환
+ * Fragment Processor (조각 프롬프트 처리기)
+ * 프롬프트에서 조각 프롬프트를 랜덤 선택으로 치환
  * 
  * 지원 형식:
  * 1. 괄호 형식 (권장): (option1/option2/option3)
  *    - 각 옵션에 쉼표 포함 가능: (white hair, blue eyes/red hair, purple eyes)
  * 2. 단순 형식: red/blue/green (쉼표로 구분된 단일 태그 내에서만)
  * 3. 파일 기반: <filename> 또는 <folder/filename>
- *    - 와일드카드 스토어에서 파일 내용을 가져와 랜덤 선택
+ *    - 조각 프롬프트 스토어에서 파일 내용을 가져와 랜덤 선택
  * 4. 인라인: <option1|option2|option3>
  *    - 파일 없이 인라인으로 옵션 정의
  * 5. 순차 모드: <*filename>
@@ -17,16 +17,16 @@ import { useWildcardStore, normalizeWildcardPath } from '@/stores/wildcard-store
  */
 
 /**
- * 파일 기반 와일드카드 처리 (비동기)
- * "<hair>" → 와일드카드 파일에서 랜덤 줄 선택
- * "<*hair>" → 와일드카드 파일에서 순차적으로 줄 선택
+ * 파일 기반 조각 프롬프트 처리 (비동기)
+ * "<hair>" → 조각 프롬프트 파일에서 랜덤 줄 선택
+ * "<*hair>" → 조각 프롬프트 파일에서 순차적으로 줄 선택
  * "<red|blue|green>" → 인라인 옵션에서 랜덤 선택
  */
 async function processFileWildcards(prompt: string): Promise<string> {
     // <...> 패턴 찾기 (중첩 불가)
     const filePattern = /<([^<>]+)>/g
     const matches: { match: string; content: string; index: number }[] = []
-    
+
     let match
     while ((match = filePattern.exec(prompt)) !== null) {
         matches.push({
@@ -55,23 +55,23 @@ async function processFileWildcards(prompt: string): Promise<string> {
 
             // 2. 순차 모드: <*filename>
             const isSequential = trimmed.startsWith('*')
-            const path = normalizeWildcardPath(isSequential ? trimmed.slice(1) : trimmed)
+            const path = normalizeFragmentPath(isSequential ? trimmed.slice(1) : trimmed)
 
             if (!path) return { match, replacement: match }
 
-            // 와일드카드 스토어에서 라인 가져오기 (비동기)
-            const store = useWildcardStore.getState()
+            // 조각 프롬프트 스토어에서 라인 가져오기 (비동기)
+            const store = useFragmentStore.getState()
             const line = isSequential
                 ? await store.getSequentialLine(path)
                 : await store.getRandomLine(path)
 
             if (line === null) {
                 // 파일을 찾을 수 없으면 원본 유지
-                console.warn(`Wildcard not found: ${path}`)
+                console.warn(`Fragment not found: ${path}`)
                 return { match, replacement: match }
             }
 
-            // 재귀적으로 중첩된 와일드카드 처리
+            // 재귀적으로 중첩된 조각 프롬프트 처리
             const processedLine = await processFileWildcards(line)
             return { match, replacement: processedLine }
         })
@@ -154,8 +154,8 @@ function processSimpleWildcards(prompt: string): string {
  * - (white hair, blue eyes/red hair, purple eyes) → 세트 중 하나 선택
  * - red/blue/green_hair → 단순 옵션 중 하나 선택
  * - (long hair/short hair), smile → 괄호 내 선택 + 일반 태그
- * - <hair> → 와일드카드 파일에서 랜덤 선택
- * - <*hair> → 와일드카드 파일에서 순차 선택
+ * - <hair> → 조각 프롬프트 파일에서 랜덤 선택
+ * - <*hair> → 조각 프롬프트 파일에서 순차 선택
  * - <red|blue|green> → 인라인 옵션에서 랜덤 선택
  */
 export async function processWildcards(prompt: string): Promise<string> {
@@ -163,7 +163,7 @@ export async function processWildcards(prompt: string): Promise<string> {
 
     let result = prompt
 
-    // 1단계: 파일 기반 와일드카드 처리 (최우선, 비동기)
+    // 1단계: 파일 기반 조각 프롬프트 처리 (최우선, 비동기)
     // <filename>, <*filename>, <option1|option2>
     result = await processFileWildcards(result)
 
@@ -184,7 +184,7 @@ export async function processWildcards(prompt: string): Promise<string> {
 export function hasWildcards(prompt: string): boolean {
     if (!prompt) return false
 
-    // 파일 기반 와일드카드 체크 <...>
+    // 파일 기반 조각 프롬프트 체크 <...>
     if (/<[^<>]+>/.test(prompt)) return true
 
     // 괄호 형식 체크
@@ -207,9 +207,9 @@ export function hasWildcards(prompt: string): boolean {
 }
 
 /**
- * 순차 와일드카드 카운터 리셋
- * @param path 특정 와일드카드 경로 (없으면 전체 리셋)
+ * 순차 조각 프롬프트 카운터 리셋
+ * @param path 특정 조각 프롬프트 경로 (없으면 전체 리셋)
  */
 export function resetWildcardCounters(path?: string): void {
-    useWildcardStore.getState().resetSequentialCounter(path)
+    useFragmentStore.getState().resetSequentialCounter(path)
 }

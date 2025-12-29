@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { generateImage, generateImageStream, GenerationParams } from '@/services/novelai-api'
 import { BaseDirectory, writeFile, mkdir, exists } from '@tauri-apps/plugin-fs'
 import { pictureDir, join } from '@tauri-apps/api/path'
-import { processWildcards } from '@/lib/wildcard-processor'
+import { processWildcards } from '@/lib/fragment-processor'
 import { useCharacterStore } from '@/stores/character-store'
 
 // Module-level variable to prevent concurrent processing across all hook instances
@@ -292,7 +292,7 @@ export function useSceneGeneration() {
 
                 // Check if there are more scenes to process
                 const sceneState = useSceneStore.getState()
-                const hasMoreScenes = sceneState.isGenerating && 
+                const hasMoreScenes = sceneState.isGenerating &&
                     sceneState.getQueuedScenes(activePresetId).length > 0
 
                 // Apply generation delay only if there are more scenes

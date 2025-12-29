@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { AutocompleteTextarea } from '@/components/ui/AutocompleteTextarea'
-import { useWildcardStore, WildcardFileMeta } from '@/stores/wildcard-store'
+import { useFragmentStore, FragmentFileMeta } from '@/stores/fragment-store'
 import {
     Plus,
     Trash2,
@@ -49,18 +49,18 @@ interface FragmentPromptDialogProps {
 
 export function FragmentPromptDialog({ open, onOpenChange }: FragmentPromptDialogProps) {
     const { t } = useTranslation()
-    
+
     // 선택적 구독으로 성능 최적화
-    const files = useWildcardStore(state => state.files)
-    const addFile = useWildcardStore(state => state.addFile)
-    const updateFile = useWildcardStore(state => state.updateFile)
-    const deleteFile = useWildcardStore(state => state.deleteFile)
-    const duplicateFile = useWildcardStore(state => state.duplicateFile)
-    const getFolders = useWildcardStore(state => state.getFolders)
-    const resetSequentialCounter = useWildcardStore(state => state.resetSequentialCounter)
-    const importFromText = useWildcardStore(state => state.importFromText)
-    const exportToText = useWildcardStore(state => state.exportToText)
-    const loadFileContent = useWildcardStore(state => state.loadFileContent)
+    const files = useFragmentStore(state => state.files)
+    const addFile = useFragmentStore(state => state.addFile)
+    const updateFile = useFragmentStore(state => state.updateFile)
+    const deleteFile = useFragmentStore(state => state.deleteFile)
+    const duplicateFile = useFragmentStore(state => state.duplicateFile)
+    const getFolders = useFragmentStore(state => state.getFolders)
+    const resetSequentialCounter = useFragmentStore(state => state.resetSequentialCounter)
+    const importFromText = useFragmentStore(state => state.importFromText)
+    const exportToText = useFragmentStore(state => state.exportToText)
+    const loadFileContent = useFragmentStore(state => state.loadFileContent)
 
     const [selectedFileId, setSelectedFileId] = useState<string | null>(null)
     const [editingContent, setEditingContent] = useState('')
@@ -96,7 +96,7 @@ export function FragmentPromptDialog({ open, onOpenChange }: FragmentPromptDialo
         }
     }, [selectedFile, loadFileContent])
 
-    const handleSelectFile = (file: WildcardFileMeta) => {
+    const handleSelectFile = (file: FragmentFileMeta) => {
         // 변경사항이 있어도 저장 안 하고 넘어감 (저장 버튼 강조로 유도)
         setSelectedFileId(file.id)
     }
@@ -151,7 +151,7 @@ export function FragmentPromptDialog({ open, onOpenChange }: FragmentPromptDialo
         for (const f of folderFiles) {
             await deleteFile(f.id)
         }
-        
+
         // 선택된 파일이 해당 폴더에 있었다면 선택 해제
         if (selectedFile && selectedFile.folder === folderName) {
             setSelectedFileId(null)
@@ -268,7 +268,7 @@ export function FragmentPromptDialog({ open, onOpenChange }: FragmentPromptDialo
     }
 
     // 폴더별 파일 그룹화
-    const filesByFolder: Record<string, WildcardFileMeta[]> = { '': [] }
+    const filesByFolder: Record<string, FragmentFileMeta[]> = { '': [] }
     folders.forEach(f => { filesByFolder[f] = [] })
     files.forEach(f => {
         const folder = f.folder || ''
@@ -511,7 +511,7 @@ function FileItem({
     onDelete,
     onDuplicate,
 }: {
-    file: WildcardFileMeta
+    file: FragmentFileMeta
     isSelected: boolean
     onSelect: () => void
     onDelete: () => void
@@ -565,11 +565,11 @@ function FolderItem({
     onAddFile,
 }: {
     folder: string
-    files: WildcardFileMeta[]
+    files: FragmentFileMeta[]
     isExpanded: boolean
     selectedFileId: string | null
     onToggle: () => void
-    onSelectFile: (file: WildcardFileMeta) => void
+    onSelectFile: (file: FragmentFileMeta) => void
     onDeleteFile: (id: string) => void
     onDuplicateFile: (id: string) => void
     onDeleteFolder: () => void

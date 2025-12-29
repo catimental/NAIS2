@@ -8,7 +8,7 @@ import { writeFile, mkdir, exists, BaseDirectory } from '@tauri-apps/plugin-fs'
 import { pictureDir, join } from '@tauri-apps/api/path'
 import { useCharacterStore } from './character-store'
 import { useCharacterPromptStore } from './character-prompt-store'
-import { processWildcards } from '@/lib/wildcard-processor'
+import { processWildcards } from '@/lib/fragment-processor'
 import i18n from '@/i18n'
 import { toast } from '@/components/ui/use-toast'
 
@@ -19,7 +19,7 @@ const createThumbnail = (base64Image: string, maxSize = 256): Promise<string> =>
         img.onload = () => {
             const canvas = document.createElement('canvas')
             const ctx = canvas.getContext('2d')!
-            
+
             // Calculate thumbnail dimensions
             let width = img.width
             let height = img.height
@@ -34,11 +34,11 @@ const createThumbnail = (base64Image: string, maxSize = 256): Promise<string> =>
                     height = maxSize
                 }
             }
-            
+
             canvas.width = width
             canvas.height = height
             ctx.drawImage(img, 0, 0, width, height)
-            
+
             // Use JPEG for smaller size (~10-30KB instead of 2-5MB)
             resolve(canvas.toDataURL('image/jpeg', 0.7))
         }
