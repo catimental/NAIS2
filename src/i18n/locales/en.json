@@ -58,6 +58,7 @@
         },
         "saved": "Saved successfully",
         "saveFailed": "Save failed",
+        "seedApplied": "Seed applied",
         "regenerated": "Regeneration complete",
         "noMetadata": "No Metadata",
         "noMetadataDesc": "No metadata found in this image"

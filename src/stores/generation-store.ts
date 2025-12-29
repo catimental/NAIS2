@@ -94,6 +94,7 @@ interface GenerationState {
 
     seed: number
     seedLocked: boolean
+    previewSeed: number | null // Seed to display for history images (does not affect generation)
     selectedResolution: Resolution
 
     // Batch generation
@@ -143,6 +144,7 @@ interface GenerationState {
 
     setSeed: (seed: number) => void
     setSeedLocked: (locked: boolean) => void
+    setPreviewSeed: (seed: number | null) => void
     setSelectedResolution: (resolution: Resolution) => void
 
     setBatchCount: (count: number) => void
@@ -208,6 +210,7 @@ export const useGenerationStore = create<GenerationState>()(
             generatingMode: null,
             isCancelled: false,
             previewImage: null,
+            previewSeed: null,
             history: [],
             abortController: null,
             streamProgress: 0,
@@ -231,6 +234,7 @@ export const useGenerationStore = create<GenerationState>()(
 
             setSeed: (seed) => set({ seed }),
             setSeedLocked: (locked) => set({ seedLocked: locked }),
+            setPreviewSeed: (previewSeed) => set({ previewSeed }),
             setSelectedResolution: (resolution) => set({ selectedResolution: resolution }),
 
             setBatchCount: (count) => set({ batchCount: count }),
@@ -292,7 +296,8 @@ export const useGenerationStore = create<GenerationState>()(
                     generatingMode: 'main',
                     isCancelled: false,
                     abortController,
-                    estimatedTime: lastGenerationTime ? lastGenerationTime * batchCount : null
+                    estimatedTime: lastGenerationTime ? lastGenerationTime * batchCount : null,
+                    previewSeed: null
                 })
 
                 try {

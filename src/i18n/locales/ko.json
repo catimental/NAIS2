@@ -58,6 +58,7 @@
         },
         "saved": "저장 완료",
         "saveFailed": "저장 실패",
+        "seedApplied": "시드가 적용되었습니다",
         "regenerated": "재생성 완료",
         "noMetadata": "메타데이터 없음",
         "noMetadataDesc": "이 이미지에서 메타데이터를 찾을 수 없습니다"

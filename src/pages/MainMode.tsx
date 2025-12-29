@@ -31,6 +31,7 @@ export default function MainMode() {
         isGenerating,
         selectedResolution,
         seed,
+        previewSeed,
 
         lastGenerationTime,
         batchCount,
@@ -535,9 +536,26 @@ export default function MainMode() {
                     <span className="font-medium">{selectedResolution.width} × {selectedResolution.height}</span>
                 </span>
                 <div className="w-px h-4 bg-white/20" />
-                <span className="flex items-center gap-2">
+                <span
+                    className={`flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity ${previewSeed ? 'text-yellow-400 font-bold' : ''}`}
+                    onClick={() => {
+                        const targetSeed = previewSeed ?? seed
+                        if (targetSeed) {
+                            // If previewing, apply the seed
+                            if (previewSeed) {
+                                genStore.setSeed(previewSeed)
+                                genStore.setPreviewSeed(null) // Exit preview mode
+                                toast({ title: t('toast.seedApplied', '시드 적용됨'), variant: 'success' })
+                            } else {
+                                // Normal behavior: Copy to clipboard
+                                navigator.clipboard.writeText(targetSeed.toString())
+                                toast({ title: t('toast.copied', '복사됨'), variant: 'success' })
+                            }
+                        }
+                    }}
+                >
                     <span className="opacity-60 text-xs uppercase tracking-wider">{t('settings.seed')}</span>
-                    <span className="font-mono">{seed || t('settings.random')}</span>
+                    <span className="font-mono">{previewSeed ?? seed ?? t('settings.random')}</span>
                 </span>
             </div>
 

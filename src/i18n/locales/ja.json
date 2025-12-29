@@ -58,6 +58,7 @@
         },
         "saved": "保存完了",
         "saveFailed": "保存失敗",
+        "seedApplied": "シードが適用されました",
         "regenerated": "再生成完了",
         "noMetadata": "メタデータなし",
         "noMetadataDesc": "この画像にはメタデータが見つかりません"
@@ -194,21 +195,6 @@
             "bottom": "下",
             "bottomRight": "下\n右"
         }
-    },
-    "common": {
-        "save": "保存",
-        "saved": "保存しました",
-        "cancel": "キャンセル",
-        "delete": "削除",
-        "edit": "編集",
-        "copy": "コピー",
-        "brush": "ブラシ",
-        "eraser": "消しゴム",
-        "size": "サイズ",
-        "generating": "生成中...",
-        "generate": "生成",
-        "change": "変更",
-        "download": "ダウンロード"
     },
     "fragmentDialog": {
         "title": "フラグメントプロンプト",

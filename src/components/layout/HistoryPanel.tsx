@@ -210,7 +210,7 @@ const HistoryImageItem = memo(function HistoryImageItem({
 
 export function HistoryPanel() {
     const { t } = useTranslation()
-    const { setPreviewImage, isGenerating, setIsGenerating, setSeed } = useGenerationStore()
+    const { setPreviewImage, isGenerating, setIsGenerating } = useGenerationStore()
     const { savePath, useAbsolutePath } = useSettingsStore()
     const [savedImages, setSavedImages] = useState<SavedImage[]>([])
     const [imageThumbnails, setImageThumbnails] = useState<Record<string, string>>({})
@@ -497,14 +497,23 @@ export function HistoryPanel() {
         // Set preview
         setPreviewImage(finalDataUrl)
 
-        // Sync Seed
+        // Show seed (Preview only)
         try {
             const metadata = await parseMetadataFromBase64(finalDataUrl)
             if (metadata && metadata.seed) {
-                setSeed(metadata.seed)
+                // Determine if this seed is different from current generation seed
+                const genStore = useGenerationStore.getState()
+                if (genStore.seed !== metadata.seed) {
+                    genStore.setPreviewSeed(metadata.seed)
+                } else {
+                    genStore.setPreviewSeed(null)
+                }
+            } else {
+                useGenerationStore.getState().setPreviewSeed(null)
             }
         } catch (error) {
             console.warn('Failed to parse metadata for seed sync:', error)
+            useGenerationStore.getState().setPreviewSeed(null)
         }
 
         navigate('/') // Navigate to main mode to show the image
