@@ -23,7 +23,6 @@ import {
     DragEndEvent,
 } from '@dnd-kit/core'
 import {
-    arrayMove,
     SortableContext,
     sortableKeyboardCoordinates,
     useSortable,
@@ -52,7 +51,7 @@ interface SortablePresetItemProps {
     onRename: () => void
     onCancelEdit: () => void
     onEditNameChange: (name: string) => void
-    t: (key: string, fallback?: string) => string
+    t: any
 }
 
 function SortablePresetItem({

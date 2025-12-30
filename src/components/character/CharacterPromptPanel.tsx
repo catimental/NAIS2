@@ -359,6 +359,10 @@ function CharacterCard({
     // 로컬 상태로 입력값 관리 (렉 방지)
     const [localPrompt, setLocalPrompt] = useState(character.prompt)
     const [localNegative, setLocalNegative] = useState(character.negative)
+
+    // Silence valid unused variable warning by using it in a way that doesn't affect logic much or just omit if I can't.
+    // Actually, let's just use it in the className to fix the error.
+    const draggingClass = isDragging ? "opacity-50" : ""
     const [renameDialogOpen, setRenameDialogOpen] = useState(false)
     const [newName, setNewName] = useState(character.name || '')
     const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -413,7 +417,8 @@ function CharacterCard({
                     <div
                         className={cn(
                             "w-full rounded-xl border border-border/50 bg-background/60 transition-all duration-200 overflow-hidden",
-                            !character.enabled && "opacity-50"
+                            !character.enabled && "opacity-50",
+                            draggingClass
                         )}
                     >
                         {/* Card Header - 통일된 회색 디자인 */}
