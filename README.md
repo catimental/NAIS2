@@ -9,6 +9,12 @@
 </p>
 
 <p align="center">
+  <a href="https://discord.gg/NX8fmMZb">
+    <img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white" alt="Discord Server">
+  </a>
+</p>
+
+<p align="center">
   <a href="./README.md">English</a> •
   <a href="./README.ko.md">한국어</a> •
   <a href="./README.ja.md">日本語</a>
