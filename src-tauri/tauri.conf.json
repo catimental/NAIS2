@@ -44,7 +44,7 @@
       "msi"
     ],
     "externalBin": [
-      "tagger-server"
+      "binaries/tagger-server"
     ],
     "createUpdaterArtifacts": true,
     "icon": [
