@@ -331,8 +331,8 @@ function SortableCharacterCard(props: CharacterCardProps) {
     }
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-            <CharacterCard {...props} isDragging={isDragging} />
+        <div ref={setNodeRef} style={style} {...attributes}>
+            <CharacterCard {...props} isDragging={isDragging} dragListeners={listeners} />
         </div>
     )
 }
@@ -340,6 +340,7 @@ function SortableCharacterCard(props: CharacterCardProps) {
 // --- Character Card Component ---
 interface CharacterCardInnerProps extends CharacterCardProps {
     isDragging?: boolean
+    dragListeners?: React.HTMLAttributes<HTMLElement>
 }
 
 function CharacterCard({
@@ -353,6 +354,7 @@ function CharacterCard({
     onDuplicate,
     positionEnabled,
     isDragging,
+    dragListeners,
 }: CharacterCardInnerProps) {
     const color = CHARACTER_COLORS[index % CHARACTER_COLORS.length]
     const { t } = useTranslation()
@@ -423,10 +425,11 @@ function CharacterCard({
                             draggingClass
                         )}
                     >
-                        {/* Card Header - 통일된 회색 디자인 */}
+                        {/* Card Header - 통일된 회색 디자인, 드래그 핸들 */}
                         <div
-                            className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors bg-muted/30"
+                            className="flex items-center gap-2.5 px-3 py-2.5 cursor-grab hover:bg-muted/50 transition-colors bg-muted/30 active:cursor-grabbing"
                             onClick={onToggleExpand}
+                            {...dragListeners}
                         >
                             {/* 캐릭터 아이콘 */}
                             <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
