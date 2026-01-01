@@ -49,7 +49,6 @@ interface HistoryImageItemProps {
     image: SavedImage
     thumbnail?: string
     index: number
-    isGenerating: boolean
     getTypeIcon: (type: 'main' | 'i2i' | 'inpaint' | 'upscale' | 'scene') => React.ReactNode
     onImageClick: (image: SavedImage) => void
     onDelete: (image: SavedImage, e?: React.MouseEvent) => void
@@ -65,7 +64,7 @@ interface HistoryImageItemProps {
 }
 
 const HistoryImageItem = memo(function HistoryImageItem({
-    image, thumbnail, index, isGenerating, getTypeIcon,
+    image, thumbnail, index, getTypeIcon,
     onImageClick, onDelete, onSaveAs, onCopy, onRegenerate,
     onOpenSmartTools, onAddAsReference, onOpenFolder, onLoadMetadata,
     onLoadComplete
@@ -621,22 +620,7 @@ export function HistoryPanel() {
         }
 
         const imageData = imageThumbnails[image.path]
-        if (!imageData) {
-            // Try to load from file if not temporary and missing from cache
-            if (!image.isTemporary) {
-                try {
-                    const data = await readFile(image.path)
-                    const base64 = arrayBufferToBase64(data)
-                    const loadedData = `data:image/png;base64,${base64}`
-                    // Continue with loadedData... but we need to refactor slightly 
-                    // to avoid complex nesting. Let's just return if truly missing.
-                } catch (e) {
-                    return
-                }
-            } else {
-                return
-            }
-        }
+
 
         // Use local variable for data to ensure we have it
         let finalData = imageThumbnails[image.path]
@@ -898,7 +882,6 @@ export function HistoryPanel() {
                                 thumbnail={imageThumbnails[image.path]}
                                 onLoadComplete={handleImageLoadComplete}
                                 index={index}
-                                isGenerating={isGenerating}
                                 getTypeIcon={getTypeIcon}
                                 onImageClick={handleImageClick}
                                 onDelete={handleDeleteImage}
