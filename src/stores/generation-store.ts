@@ -91,6 +91,8 @@ interface GenerationState {
     smea: boolean
     smeaDyn: boolean
     variety: boolean
+    qualityToggle: boolean
+    ucPreset: number // 0=Heavy, 1=Light, 2=Furry, 3=Human, 4=None
 
     seed: number
     seedLocked: boolean
@@ -141,6 +143,8 @@ interface GenerationState {
     setSmea: (v: boolean) => void
     setSmeaDyn: (v: boolean) => void
     setVariety: (v: boolean) => void
+    setQualityToggle: (v: boolean) => void
+    setUcPreset: (v: number) => void
 
     setSeed: (seed: number) => void
     setSeedLocked: (locked: boolean) => void
@@ -188,6 +192,8 @@ export const useGenerationStore = create<GenerationState>()(
             smea: true,
             smeaDyn: true,
             variety: false,
+            qualityToggle: false,
+            ucPreset: 0,
 
             seed: Math.floor(Math.random() * 4294967295),
             seedLocked: false,
@@ -231,6 +237,8 @@ export const useGenerationStore = create<GenerationState>()(
             setSmea: (smea) => set({ smea }),
             setSmeaDyn: (smeaDyn) => set({ smeaDyn }),
             setVariety: (variety) => set({ variety }),
+            setQualityToggle: (qualityToggle) => set({ qualityToggle }),
+            setUcPreset: (ucPreset) => set({ ucPreset }),
 
             setSeed: (seed) => set({ seed }),
             setSeedLocked: (locked) => set({ seedLocked: locked }),
@@ -263,6 +271,7 @@ export const useGenerationStore = create<GenerationState>()(
                 const {
                     basePrompt, additionalPrompt, detailPrompt, negativePrompt, inpaintingPrompt,
                     model, steps, cfgScale, cfgRescale, sampler, scheduler, smea, smeaDyn, variety,
+                    qualityToggle, ucPreset,
                     selectedResolution, seed, batchCount, lastGenerationTime,
                     sourceImage, strength, noise, mask
                 } = get()
@@ -380,6 +389,8 @@ export const useGenerationStore = create<GenerationState>()(
                             smea,
                             smea_dyn: smeaDyn,
                             variety,
+                            qualityToggle,
+                            ucPreset,
                             seed: currentSeed,
 
                             // I2I & Inpainting
@@ -624,6 +635,8 @@ export const useGenerationStore = create<GenerationState>()(
                 smea: state.smea,
                 smeaDyn: state.smeaDyn,
                 variety: state.variety,
+                qualityToggle: state.qualityToggle,
+                ucPreset: state.ucPreset,
                 // Seed - only save if locked
                 ...(state.seedLocked ? { seed: state.seed } : {}),
                 seedLocked: state.seedLocked,

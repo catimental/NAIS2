@@ -71,6 +71,8 @@ export interface NAIMetadata {
     smea?: boolean  // "sm" in NAI
     smeaDyn?: boolean  // "sm_dyn" in NAI
     variety?: boolean // Derived from "skip_cfg_above_sigma"
+    qualityToggle?: boolean // "qualityToggle" - Add Quality Tags
+    ucPreset?: number // "ucPreset" - Undesired Content Preset (0=Heavy, 1=Light, 2=Furry, 3=Human, 4=None)
 
     // Resolution
     width?: number
@@ -89,6 +91,10 @@ export interface NAIMetadata {
     v4_negative_prompt?: {
         caption?: {
             base_caption?: string
+            char_captions?: Array<{
+                char_caption: string
+                centers: Array<{ x: number, y: number }>
+            }>
         }
     }
 
@@ -421,9 +427,18 @@ function convertNAIFormat(data: Record<string, unknown>): NAIMetadata {
 
     // Basic prompts
     if (data.prompt) metadata.prompt = String(data.prompt)
-    if (data.uc) metadata.negativePrompt = String(data.uc)
-    if (!metadata.negativePrompt && data.negative_prompt) metadata.negativePrompt = String(data.negative_prompt)
-    if (!metadata.negativePrompt && data.undesired_content) metadata.negativePrompt = String(data.undesired_content)
+
+    // V4 negative prompt has higher priority than legacy 'uc'
+    const v4NegPrompt = data.v4_negative_prompt as NAIMetadata['v4_negative_prompt'] | undefined
+    if (v4NegPrompt?.caption?.base_caption) {
+        metadata.negativePrompt = String(v4NegPrompt.caption.base_caption)
+    } else if (data.uc) {
+        metadata.negativePrompt = String(data.uc)
+    } else if (data.negative_prompt) {
+        metadata.negativePrompt = String(data.negative_prompt)
+    } else if (data.undesired_content) {
+        metadata.negativePrompt = String(data.undesired_content)
+    }
 
     // Generation params
     if (data.steps) metadata.steps = Number(data.steps)
@@ -437,6 +452,10 @@ function convertNAIFormat(data: Record<string, unknown>): NAIMetadata {
     if (typeof data.sm === 'boolean') metadata.smea = data.sm
     if (typeof data.sm_dyn === 'boolean') metadata.smeaDyn = data.sm_dyn
     if (data.skip_cfg_above_sigma !== undefined && data.skip_cfg_above_sigma !== null) metadata.variety = true
+
+    // NAI UI options
+    if (typeof data.qualityToggle === 'boolean') metadata.qualityToggle = data.qualityToggle
+    if (typeof data.ucPreset === 'number') metadata.ucPreset = data.ucPreset
 
     // Resolution
     if (data.width) metadata.width = Number(data.width)

@@ -70,6 +70,10 @@ export interface GenerationParams {
 
     // Inpainting Parameters
     mask?: string           // Base64 encoded mask (white = inpaint area)
+
+    // NAI UI options
+    qualityToggle?: boolean // Add Quality Tags
+    ucPreset?: number       // Undesired Content Preset (0=Heavy, 1=Light, 2=Furry, 3=Human, 4=None)
 }
 
 /**
@@ -396,24 +400,31 @@ export async function generateImage(
             legacy: false,
             legacy_v3_extend: false,
 
-            // SMEA settings (sm must be true for sm_dyn to work)
-            // Note: NAI v4/v4.5 models don't support SMEA
-            sm: params.model.includes('diffusion-4') ? false : params.smea,
-            sm_dyn: params.model.includes('diffusion-4') ? false : (params.smea && params.smea_dyn),
+            // SMEA settings - V4/V4.5 doesn't use sm/sm_dyn, only autoSmea
+            // (V3 models would need sm/sm_dyn but we focus on V4/V4.5)
 
             // Dynamic Thresholding
             dynamic_thresholding: false,
 
             // Skip CFG settings (Variety+)
-            // 19 is a common default for variety boost when enabled.
-            skip_cfg_above_sigma: params.variety ? 19 : null,
+            // NAI uses 58 for variety boost when enabled
+            skip_cfg_above_sigma: params.variety ? 58 : null,
 
             // V4 specific
             add_original_image: true,
             legacy_uc: false,
             prefer_brownian: true,
-            ucPreset: 0,
+            ucPreset: params.ucPreset ?? 0,
             use_coords: false,
+
+            // NAI compatibility fields
+            qualityToggle: params.qualityToggle ?? false,
+            autoSmea: false,
+            controlnet_strength: 1,
+            normalize_reference_strength_multiple: true,
+            inpaintImg2ImgStrength: 1,
+            deliberate_euler_ancestral_bug: false,
+            image_format: 'png',
 
             // Reference/Vibe Transfer
             reference_image_multiple: processedVibeImages,
@@ -453,8 +464,6 @@ export async function generateImage(
                     base_caption: params.negative_prompt,
                     char_captions: [] as { char_caption: string, centers: { x: number, y: number }[] }[],
                 },
-                use_coords: false,
-                use_order: false,
                 legacy_uc: false,
             },
         }
@@ -464,31 +473,39 @@ export async function generateImage(
             const usePositions = params.characterPositionEnabled ?? false
             for (const char of params.characterPrompts) {
                 if (char.enabled && char.prompt.trim()) {
+                    const centers = usePositions
+                        ? [{ x: char.position.x, y: char.position.y }]
+                        : [{ x: 0.5, y: 0.5 }]
+
                     apiParameters.v4_prompt.caption.char_captions.push({
                         char_caption: char.prompt,
-                        // 위치 활성화되었을 때만 position 사용, 아니면 중앙(0.5, 0.5)
-                        centers: usePositions
-                            ? [{ x: char.position.x, y: char.position.y }]
-                            : [{ x: 0.5, y: 0.5 }]
+                        centers: centers
                     })
-                    // Also add negative if exists
-                    if (char.negative.trim()) {
-                        apiParameters.v4_negative_prompt.caption.char_captions.push({
-                            char_caption: char.negative,
-                            centers: usePositions
-                                ? [{ x: char.position.x, y: char.position.y }]
-                                : [{ x: 0.5, y: 0.5 }]
-                        })
-                    }
+                    // Always add negative char_caption (empty string if no negative)
+                    // NAI requires 1:1 matching between positive and negative char_captions
+                    apiParameters.v4_negative_prompt.caption.char_captions.push({
+                        char_caption: char.negative?.trim() || '',
+                        centers: centers
+                    })
                 }
             }
             // Enable coords only if position feature is enabled
             if (apiParameters.v4_prompt.caption.char_captions.length > 0 && usePositions) {
                 apiParameters.v4_prompt.use_coords = true
-                apiParameters.v4_negative_prompt.use_coords = true
                 // @ts-ignore
                 apiParameters.use_coords = true
             }
+
+            // Add characterPrompts array for NAI compatibility
+            // @ts-ignore
+            apiParameters.characterPrompts = params.characterPrompts
+                .filter(c => c.enabled && c.prompt.trim())
+                .map(c => ({
+                    prompt: c.prompt,
+                    uc: c.negative?.trim() || '',
+                    center: { x: c.position.x, y: c.position.y },
+                    enabled: true
+                }))
         }
 
         if (processedVibeImages.length > 1) {
@@ -769,27 +786,34 @@ export async function generateImageStream(
             legacy: false,
             legacy_v3_extend: false,
 
-            // SMEA settings (sm must be true for sm_dyn to work)
-            // Note: NAI v4/v4.5 models don't support SMEA
-            sm: params.model.includes('diffusion-4') ? false : params.smea,
-            sm_dyn: params.model.includes('diffusion-4') ? false : (params.smea && params.smea_dyn),
+            // SMEA settings - V4/V4.5 doesn't use sm/sm_dyn, only autoSmea
+            // (V3 models would need sm/sm_dyn but we focus on V4/V4.5)
 
             // Dynamic Thresholding
             dynamic_thresholding: false,
 
-            // Skip CFG settings
-            skip_cfg_above_sigma: null,
+            // Skip CFG settings (Variety+)
+            // NAI uses 58 for variety boost when enabled
+            skip_cfg_above_sigma: params.variety ? 58 : null,
 
             // V4 specific
             add_original_image: true,
             legacy_uc: false,
             prefer_brownian: true,
-            ucPreset: 0,
+            ucPreset: params.ucPreset ?? 0,
             use_coords: false,
 
             // Streaming specific
             stream: 'msgpack',
-            qualityToggle: true,
+
+            // NAI compatibility fields
+            qualityToggle: params.qualityToggle ?? false,
+            autoSmea: false,
+            controlnet_strength: 1,
+            normalize_reference_strength_multiple: true,
+            inpaintImg2ImgStrength: 1,
+            deliberate_euler_ancestral_bug: false,
+            image_format: 'png',
 
             // Reference/Vibe Transfer
             reference_image_multiple: processedVibeImages,
@@ -829,8 +853,6 @@ export async function generateImageStream(
                     base_caption: params.negative_prompt,
                     char_captions: [] as { char_caption: string, centers: { x: number, y: number }[] }[],
                 },
-                use_coords: false,
-                use_order: false,
                 legacy_uc: false,
             },
         }
@@ -840,30 +862,37 @@ export async function generateImageStream(
             const usePositions = params.characterPositionEnabled ?? false
             for (const char of params.characterPrompts) {
                 if (char.enabled && char.prompt.trim()) {
+                    const centers = usePositions
+                        ? [{ x: char.position.x, y: char.position.y }]
+                        : [{ x: 0.5, y: 0.5 }]
+
                     apiParameters.v4_prompt.caption.char_captions.push({
                         char_caption: char.prompt,
-                        // 위치 활성화되었을 때만 position 사용, 아니면 중앙(0.5, 0.5)
-                        centers: usePositions
-                            ? [{ x: char.position.x, y: char.position.y }]
-                            : [{ x: 0.5, y: 0.5 }]
+                        centers: centers
                     })
-                    // Also add negative if exists
-                    if (char.negative.trim()) {
-                        apiParameters.v4_negative_prompt.caption.char_captions.push({
-                            char_caption: char.negative,
-                            centers: usePositions
-                                ? [{ x: char.position.x, y: char.position.y }]
-                                : [{ x: 0.5, y: 0.5 }]
-                        })
-                    }
+                    // Always add negative char_caption (empty string if no negative)
+                    // NAI requires 1:1 matching between positive and negative char_captions
+                    apiParameters.v4_negative_prompt.caption.char_captions.push({
+                        char_caption: char.negative?.trim() || '',
+                        centers: centers
+                    })
                 }
             }
             // Enable coords only if position feature is enabled
             if (apiParameters.v4_prompt.caption.char_captions.length > 0 && usePositions) {
                 apiParameters.v4_prompt.use_coords = true
-                apiParameters.v4_negative_prompt.use_coords = true
                 apiParameters.use_coords = true
             }
+
+            // Add characterPrompts array for NAI compatibility
+            apiParameters.characterPrompts = params.characterPrompts
+                .filter(c => c.enabled && c.prompt.trim())
+                .map(c => ({
+                    prompt: c.prompt,
+                    uc: c.negative?.trim() || '',
+                    center: { x: c.position.x, y: c.position.y },
+                    enabled: true
+                }))
         }
 
         if (processedVibeImages.length > 1) {

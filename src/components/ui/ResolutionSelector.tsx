@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
+import { useSettingsStore } from '@/stores/settings-store'
 
 export const RESOLUTION_PRESETS = [
     { key: 'portrait', width: 832, height: 1216 },
@@ -40,24 +41,52 @@ interface ResolutionSelectorProps {
     disabled?: boolean
 }
 
+
 export function ResolutionSelector({ value, onChange, disabled }: ResolutionSelectorProps) {
     const { t } = useTranslation()
+    const customResolutions = useSettingsStore(state => state.customResolutions)
+    const addCustomResolution = useSettingsStore(state => state.addCustomResolution)
+
     const [customWidth, setCustomWidth] = useState(1024)
     const [customHeight, setCustomHeight] = useState(1024)
     const [customDialogOpen, setCustomDialogOpen] = useState(false)
     const [customLabel, setCustomLabel] = useState('Custom')
 
-    // Find if current value matches a preset
-    const currentPreset = RESOLUTION_PRESETS.find(
+    // Find if current value matches a standard preset
+    const standardPreset = RESOLUTION_PRESETS.find(
         (p) => p.width === value.width && p.height === value.height
     )
 
-    // If not a standard preset, treat as custom
-    const selectedValue = currentPreset ? currentPreset.key : 'custom_value'
+    // Find if current value matches a custom preset
+    const customPreset = customResolutions.find(
+        (p) => p.width === value.width && p.height === value.height
+    )
+
+    // Determine selected value
+    let selectedValue = 'custom_value'
+    if (standardPreset) selectedValue = standardPreset.key
+    else if (customPreset) selectedValue = `custom_${customPreset.id}`
 
     const handleValueChange = (val: string) => {
         if (val === 'custom') {
-            setCustomDialogOpen(true)
+            // Use setTimeout to prevent Radix UI Portal conflict (NotFoundError)
+            // This allows the Select to close fully before the Dialog opens
+            setTimeout(() => {
+                setCustomDialogOpen(true)
+            }, 0)
+            return
+        }
+
+        if (val.startsWith('custom_')) {
+            const id = val.replace('custom_', '')
+            const preset = customResolutions.find(p => String(p.id) === id)
+            if (preset) {
+                onChange({
+                    label: preset.label,
+                    width: preset.width,
+                    height: preset.height,
+                })
+            }
             return
         }
 
@@ -72,10 +101,22 @@ export function ResolutionSelector({ value, onChange, disabled }: ResolutionSele
     }
 
     const handleCustomSave = () => {
+        const label = customLabel || `${customWidth}x${customHeight}`
+        const width = Number(customWidth)
+        const height = Number(customHeight)
+
+        // Save to store
+        addCustomResolution({
+            label,
+            width,
+            height,
+        })
+
+        // Apply immediately
         onChange({
-            label: customLabel || `${customWidth}x${customHeight}`,
-            width: Number(customWidth),
-            height: Number(customHeight),
+            label,
+            width,
+            height,
         })
         setCustomDialogOpen(false)
     }
@@ -88,8 +129,8 @@ export function ResolutionSelector({ value, onChange, disabled }: ResolutionSele
                 disabled={disabled}
             >
                 <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('resolutions.portrait')} >
-                        {selectedValue === 'custom_value' ? `${value.width} × ${value.height}` : undefined}
+                    <SelectValue placeholder={t('resolutions.portrait')}>
+                        {standardPreset ? undefined : (customPreset ? customPreset.label : `${value.width} × ${value.height}`)}
                     </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -103,6 +144,27 @@ export function ResolutionSelector({ value, onChange, disabled }: ResolutionSele
                             </span>
                         </SelectItem>
                     ))}
+
+                    {customResolutions.length > 0 && (
+                        <>
+                            <div className="h-px bg-muted my-1 mx-1" />
+                            <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                                {t('resolutions.custom', '사용자 정의')}
+                            </div>
+                            {customResolutions.map((c) => (
+                                <SelectItem key={c.id} value={`custom_${c.id}`}>
+                                    <span className="flex items-center justify-between w-full min-w-[180px]">
+                                        <span>{c.label}</span>
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                            {c.width} × {c.height}
+                                        </span>
+                                    </span>
+                                </SelectItem>
+                            ))}
+                            <div className="h-px bg-muted my-1 mx-1" />
+                        </>
+                    )}
+
                     <SelectItem value="custom" className="text-primary font-medium">
                         <span className="flex items-center">
                             <Plus className="mr-2 h-4 w-4" />
@@ -112,8 +174,8 @@ export function ResolutionSelector({ value, onChange, disabled }: ResolutionSele
                 </SelectContent>
             </Select>
 
-            <Dialog open={customDialogOpen} onOpenChange={setCustomDialogOpen}>
-                <DialogContent>
+            <Dialog open={customDialogOpen} onOpenChange={setCustomDialogOpen} modal={false}>
+                <DialogContent onInteractOutside={(e) => e.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{t('resolutions.addCustom')}</DialogTitle>
                         <DialogDescription>

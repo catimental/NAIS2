@@ -178,6 +178,8 @@ export function MetadataDialog({ open, onOpenChange, initialImage }: MetadataDia
             if (typeof metadata.smea === 'boolean') genStore.setSmea(metadata.smea)
             if (typeof metadata.smeaDyn === 'boolean') genStore.setSmeaDyn(metadata.smeaDyn)
             if (typeof metadata.variety === 'boolean') genStore.setVariety(metadata.variety)
+            if (typeof metadata.qualityToggle === 'boolean') genStore.setQualityToggle(metadata.qualityToggle)
+            if (typeof metadata.ucPreset === 'number') genStore.setUcPreset(metadata.ucPreset)
         }
 
         if (loadOptions.resolution && metadata.width && metadata.height) {
@@ -194,16 +196,21 @@ export function MetadataDialog({ open, onOpenChange, initialImage }: MetadataDia
         }
 
         if (loadOptions.characterPrompts && metadata.v4_prompt?.caption?.char_captions) {
-            charStore.clearAll()
+            // 기존 캐릭터 프롬프트 유지하고 새 캐릭터 추가 (병합 방식)
+            const negativeCharCaptions = metadata.v4_negative_prompt?.caption?.char_captions || []
+
             metadata.v4_prompt.caption.char_captions.forEach((cap, index) => {
                 const presetId = Date.now().toString() + Math.random().toString(36).substr(2, 9) + index
+
+                // 해당 인덱스의 캐릭터 네거티브 프롬프트 가져오기
+                const charNegative = negativeCharCaptions[index]?.char_caption || ''
 
                 // 1. Add to Library (Presets)
                 charStore.addPreset({
                     id: presetId,
                     name: `Imported ${index + 1}`,
                     prompt: cap.char_caption,
-                    negative: ''
+                    negative: charNegative
                 })
 
                 // 2. Add to Stage (Linked)
@@ -211,6 +218,7 @@ export function MetadataDialog({ open, onOpenChange, initialImage }: MetadataDia
                     charStore.addCharacter({
                         presetId: presetId,
                         prompt: cap.char_caption,
+                        negative: charNegative,
                         position: center,
                         enabled: true
                     })
@@ -400,7 +408,23 @@ export function MetadataDialog({ open, onOpenChange, initialImage }: MetadataDia
                                             <div className="bg-muted/30 rounded-lg p-2">
                                                 <span className="text-muted-foreground">Variety:</span>
                                                 <span className="ml-1 font-medium">
-                                                    {metadata.variety ? '+19' : 'OFF'}
+                                                    {metadata.variety ? '+58' : 'OFF'}
+                                                </span>
+                                            </div>
+                                            <div className="bg-muted/30 rounded-lg p-2">
+                                                <span className="text-muted-foreground">Quality Tags:</span>
+                                                <span className="ml-1 font-medium">
+                                                    {metadata.qualityToggle ? 'ON' : 'OFF'}
+                                                </span>
+                                            </div>
+                                            <div className="bg-muted/30 rounded-lg p-2">
+                                                <span className="text-muted-foreground">UC Preset:</span>
+                                                <span className="ml-1 font-medium">
+                                                    {metadata.ucPreset === 0 ? 'Heavy' :
+                                                        metadata.ucPreset === 1 ? 'Light' :
+                                                            metadata.ucPreset === 2 ? 'Furry' :
+                                                                metadata.ucPreset === 3 ? 'Human' :
+                                                                    metadata.ucPreset === 4 ? 'None' : '-'}
                                                 </span>
                                             </div>
                                         </div>

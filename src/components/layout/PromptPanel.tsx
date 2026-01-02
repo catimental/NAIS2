@@ -28,7 +28,6 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-    DialogFooter,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { generateRandomSeed } from '@/lib/utils'
@@ -95,6 +94,8 @@ export function PromptPanel() {
     const smea = useGenerationStore(state => state.smea)
     const smeaDyn = useGenerationStore(state => state.smeaDyn)
     const variety = useGenerationStore(state => state.variety)
+    const qualityToggle = useGenerationStore(state => state.qualityToggle)
+    const ucPreset = useGenerationStore(state => state.ucPreset)
     const batchCount = useGenerationStore(state => state.batchCount)
     const currentBatch = useGenerationStore(state => state.currentBatch)
     const generatingMode = useGenerationStore(state => state.generatingMode)
@@ -116,22 +117,18 @@ export function PromptPanel() {
     const setSmea = useGenerationStore(state => state.setSmea)
     const setSmeaDyn = useGenerationStore(state => state.setSmeaDyn)
     const setVariety = useGenerationStore(state => state.setVariety)
+    const setQualityToggle = useGenerationStore(state => state.setQualityToggle)
+    const setUcPreset = useGenerationStore(state => state.setUcPreset)
     const setBatchCount = useGenerationStore(state => state.setBatchCount)
     const generate = useGenerationStore(state => state.generate)
     const cancelGeneration = useGenerationStore(state => state.cancelGeneration)
 
     // Zustand 선택적 구독 - settingsStore
-    const addCustomResolution = useSettingsStore(state => state.addCustomResolution)
     const promptFontSize = useSettingsStore(state => state.promptFontSize)
 
     // Zustand 선택적 구독 - characterPromptStore
     const characterCount = useCharacterPromptStore(state => state.characters.filter(c => c.enabled).length)
 
-    // Custom resolution dialog state
-    const [customDialogOpen, setCustomDialogOpen] = useState(false)
-    const [newResLabel, setNewResLabel] = useState('')
-    const [newResWidth, setNewResWidth] = useState(1920)
-    const [newResHeight, setNewResHeight] = useState(1080)
     const [promptGenOpen, setPromptGenOpen] = useState(false)
     const [fragmentDialogOpen, setFragmentDialogOpen] = useState(false)
     const [characterPanelOpen, setCharacterPanelOpen] = useState(false)
@@ -167,25 +164,7 @@ export function PromptPanel() {
         }
     }
 
-    const handleAddCustomResolution = () => {
-        if (newResWidth > 0 && newResHeight > 0) {
-            const label = newResLabel || `${newResWidth}×${newResHeight}`
-            addCustomResolution({
-                label,
-                width: newResWidth,
-                height: newResHeight
-            })
-            setSelectedResolution({
-                label,
-                width: newResWidth,
-                height: newResHeight
-            })
-            setCustomDialogOpen(false)
-            setNewResLabel('')
-            setNewResWidth(1920)
-            setNewResHeight(1080)
-        }
-    }
+
 
 
     // Conflict Detection
@@ -513,57 +492,40 @@ export function PromptPanel() {
                                 />
                             </div>
 
-                        </div>
-                        {/* Additional Custom Resolution Dialog inside this context was causing issues if not careful, but it's fine here as long as it's separate */}
-                        <Dialog open={customDialogOpen} onOpenChange={setCustomDialogOpen}>
-                            <DialogContent className="sm:max-w-[360px]">
-                                <DialogHeader>
-                                    <DialogTitle>{t('resolutions.addCustom')}</DialogTitle>
-                                    <DialogDescription>
-                                        {t('resolutions.addCustomDesc')}
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                    <div className="space-y-2">
-                                        <Label>{t('resolutions.presetName')}</Label>
-                                        <Input
-                                            value={newResLabel}
-                                            onChange={(e) => setNewResLabel(e.target.value)}
-                                            placeholder="FHD, 4K, etc."
-                                            className="rounded-xl"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-2">
-                                            <Label>{t('resolutions.width')}</Label>
-                                            <Input
-                                                type="number"
-                                                value={newResWidth}
-                                                onChange={(e) => setNewResWidth(Number(e.target.value))}
-                                                className="rounded-xl"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>{t('resolutions.height')}</Label>
-                                            <Input
-                                                type="number"
-                                                value={newResHeight}
-                                                onChange={(e) => setNewResHeight(Number(e.target.value))}
-                                                className="rounded-xl"
-                                            />
-                                        </div>
-                                    </div>
+                            {/* Add Quality Tags */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col gap-1">
+                                    <Label className="cursor-pointer" onClick={() => setQualityToggle(!qualityToggle)}>
+                                        {t('parameters.qualityToggle', 'Add Quality Tags')}
+                                    </Label>
+                                    <span className="text-xs text-muted-foreground">Adds quality tags to prompt</span>
                                 </div>
-                                <DialogFooter>
-                                    <Button variant="outline" onClick={() => setCustomDialogOpen(false)}>
-                                        {t('common.cancel')}
-                                    </Button>
-                                    <Button onClick={handleAddCustomResolution}>
-                                        {t('common.save')}
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                                <Switch
+                                    checked={qualityToggle}
+                                    onChange={(e) => setQualityToggle(e.target.checked)}
+                                />
+                            </div>
+
+                            {/* UC Preset */}
+                            <div className="space-y-2">
+                                <Label>{t('parameters.ucPreset', 'UC Preset')}</Label>
+                                <Select value={String(ucPreset)} onValueChange={(v) => setUcPreset(Number(v))}>
+                                    <SelectTrigger className="rounded-xl">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="0">Heavy</SelectItem>
+                                        <SelectItem value="1">Light</SelectItem>
+                                        <SelectItem value="2">Furry Focus</SelectItem>
+                                        <SelectItem value="3">Human Focus</SelectItem>
+                                        <SelectItem value="4">None</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* End of Parameters Dialog Content */}
+                        </div>
+
                     </DialogContent>
                 </Dialog>
             </div>
