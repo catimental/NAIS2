@@ -80,6 +80,10 @@ export default function SceneDetail() {
     const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null)
     const { streamingSceneId, streamingImage, streamingProgress } = useSceneStore()
 
+    // Auto-save prompt logic - hooks must be before conditional return
+    const updateScenePrompt = useSceneStore(state => state.updateScenePrompt)
+    const [localPrompt, setLocalPrompt] = useState(scene?.scenePrompt || '')
+
     // ESC key handler for closing viewer
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
@@ -99,6 +103,25 @@ export default function SceneDetail() {
         }
     }, [scene?.name])
 
+    // Sync local prompt when scene ID changes
+    useEffect(() => {
+        if (scene) {
+            setLocalPrompt(scene.scenePrompt)
+        }
+    }, [scene?.id])
+
+    // Debounced save of prompt to store
+    useEffect(() => {
+        if (!scene || !activePresetId) return
+        if (localPrompt === scene.scenePrompt) return
+
+        const timer = setTimeout(() => {
+            updateScenePrompt(activePresetId, scene.id, localPrompt)
+        }, 1000)
+
+        return () => clearTimeout(timer)
+    }, [localPrompt, scene, activePresetId, updateScenePrompt])
+
     const handleBack = () => {
         nav('/scenes')
     }
@@ -114,28 +137,6 @@ export default function SceneDetail() {
             </div>
         )
     }
-
-    // Auto-save prompt logic...
-    const updateScenePrompt = useSceneStore(state => state.updateScenePrompt)
-    const [localPrompt, setLocalPrompt] = useState(scene.scenePrompt)
-
-    // Sync local state when store changes (only if not editing actively? No, store is truth)
-    // Actually we want local state to drive the input, and debounce save to store.
-    // But if we switch scenes, we need to reset.
-    useEffect(() => {
-        setLocalPrompt(scene.scenePrompt)
-    }, [scene.id]) // Only when scene ID changes
-
-    useEffect(() => {
-        // Don't save if it's the same
-        if (localPrompt === scene.scenePrompt) return
-
-        const timer = setTimeout(() => {
-            updateScenePrompt(activePresetId, scene.id, localPrompt)
-        }, 1000) // 1 second debounce
-
-        return () => clearTimeout(timer)
-    }, [localPrompt, scene, activePresetId, updateScenePrompt])
 
     const handleSaveName = () => {
         if (editName.trim()) {

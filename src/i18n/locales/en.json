@@ -347,11 +347,11 @@
         "deleted": "Deleted successfully"
     },
     "resolutions": {
-        "portrait": "Portrait (832×1216)",
-        "landscape": "Landscape (1216×832)",
-        "square": "Square (1024×1024)",
-        "tallPortrait": "Tall Portrait (640×1536)",
-        "wideLandscape": "Wide Landscape (1536×640)",
+        "portrait": "Portrait",
+        "landscape": "Landscape",
+        "square": "Square",
+        "tallPortrait": "Tall Portrait",
+        "wideLandscape": "Wide Landscape",
         "custom": "Custom",
         "addCustom": "Add Custom Resolution",
         "addCustomDesc": "Add a new resolution preset",

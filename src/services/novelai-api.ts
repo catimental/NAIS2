@@ -464,7 +464,6 @@ export async function generateImage(
                     base_caption: params.negative_prompt,
                     char_captions: [] as { char_caption: string, centers: { x: number, y: number }[] }[],
                 },
-                legacy_uc: false,
             },
         }
 
@@ -853,7 +852,6 @@ export async function generateImageStream(
                     base_caption: params.negative_prompt,
                     char_captions: [] as { char_caption: string, centers: { x: number, y: number }[] }[],
                 },
-                legacy_uc: false,
             },
         }
 

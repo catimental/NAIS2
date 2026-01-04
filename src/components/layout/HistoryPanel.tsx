@@ -233,9 +233,20 @@ export function HistoryPanel() {
 
 
 
+    // LRU cache limit for imageThumbnails to prevent memory bloat
+    const MAX_THUMBNAIL_CACHE = 20
+
     const handleImageLoadComplete = useCallback((path: string, data: string) => {
         setImageThumbnails(prev => {
             if (prev[path]) return prev
+            const keys = Object.keys(prev)
+            // If cache is full, remove oldest entries (first in object)
+            if (keys.length >= MAX_THUMBNAIL_CACHE) {
+                const keysToRemove = keys.slice(0, keys.length - MAX_THUMBNAIL_CACHE + 1)
+                const newCache = { ...prev }
+                keysToRemove.forEach(k => delete newCache[k])
+                return { ...newCache, [path]: data }
+            }
             return { ...prev, [path]: data }
         })
     }, [])
@@ -273,7 +284,17 @@ export function HistoryPanel() {
             }
             return next.slice(0, 50)
         })
-        setImageThumbnails(prev => ({ ...prev, [imagePath]: imageData }))
+        // Apply same cache limit for instant additions
+        setImageThumbnails(prev => {
+            const keys = Object.keys(prev)
+            if (keys.length >= MAX_THUMBNAIL_CACHE) {
+                const keysToRemove = keys.slice(0, keys.length - MAX_THUMBNAIL_CACHE + 1)
+                const newCache = { ...prev }
+                keysToRemove.forEach(k => delete newCache[k])
+                return { ...newCache, [imagePath]: imageData }
+            }
+            return { ...prev, [imagePath]: imageData }
+        })
     }, [])
 
     const getGenerationType = (name: string): 'main' | 'i2i' | 'inpaint' | 'upscale' | 'scene' => {

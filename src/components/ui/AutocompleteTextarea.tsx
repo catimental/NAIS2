@@ -96,8 +96,16 @@ export function AutocompleteTextarea({
     // --- Helpers ---
     const getCurrentWord = (text: string, position: number) => {
         const left = text.slice(0, position)
-        const match = left.match(/[^,\n]*$/) // Match backwards to comma or newline
+        // Match backwards to comma, newline, or :: (for V4 weight syntax like 2::tag::)
+        const match = left.match(/[^,\n:]*$/)
         return match ? match[0].trimStart() : ''
+    }
+    
+    // Get word start position for tag insertion (accounts for :: prefix)
+    const getWordStartPos = (text: string, position: number): number => {
+        const left = text.slice(0, position)
+        const match = left.match(/[^,\n:]*$/)
+        return match ? match.index! : position
     }
 
     // `<` 이후의 와일드카드 이름 추출
@@ -209,7 +217,7 @@ export function AutocompleteTextarea({
     const insertSuggestion = (suggestion: SuggestionItem) => {
         if (!textareaRef.current) return
         const el = textareaRef.current
-        const val = value
+        const val = internalValue  // Use internal value for immediate update
         const pos = el.selectionEnd || 0
 
         if (suggestionMode === 'wildcard') {
@@ -227,40 +235,67 @@ export function AutocompleteTextarea({
 
             // <name> 형태로 삽입 (닫는 괄호 포함)
             const newValue = before + '<' + suggestion.value + '>' + after
+            const newCursorPos = bracketPos + suggestion.value.length + 2 // <name>
 
-            onChange({ target: { value: newValue } })
+            // Update internal state immediately (no flicker)
+            setInternalValue(newValue)
             setIsVisible(false)
 
-            // 커서 위치 설정 (삽입된 와일드카드 뒤)
-            setTimeout(() => {
-                const newPos = bracketPos + suggestion.value.length + 2 // <name>
-                el.setSelectionRange(newPos, newPos)
-                el.focus()
-            }, 0)
+            // Set cursor position immediately
+            requestAnimationFrame(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.setSelectionRange(newCursorPos, newCursorPos)
+                    textareaRef.current.focus()
+                }
+            })
+
+            // Debounce external onChange to avoid re-render resetting cursor
+            if (onChangeTimerRef.current) clearTimeout(onChangeTimerRef.current)
+            onChangeTimerRef.current = setTimeout(() => {
+                onChange({ target: { value: newValue } })
+            }, 50)
         } else {
-            // 일반 태그 삽입
+            // 일반 태그 삽입 (:: 문법 지원)
             const left = val.slice(0, pos)
-            const wordMatch = left.match(/[^,\n]*$/)
+            const wordMatch = left.match(/[^,\n:]*$/)
             if (!wordMatch) return
 
             const wordStart = wordMatch.index!
             const before = val.slice(0, wordStart)
             const after = val.slice(pos)
-            // Add space if needed
-            const prefix = (before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n')) ? ' ' : ''
+            
+            // Add space only if not at start and not after special chars
+            const lastChar = before.slice(-1)
+            const needsSpace = before.length > 0 && ![' ', '\n', ':'].includes(lastChar)
+            const prefix = needsSpace ? ' ' : ''
+            
+            // Always use ", " as suffix (user will close :: manually if needed)
+            const suffix = ', '
 
-            const newValue = before + prefix + suggestion.value + ', ' + after
+            // Keep after as-is to preserve newlines and formatting
+            const newValue = before + prefix + suggestion.value + suffix + after
+            
+            // Calculate new cursor position
+            const newCursorPos = wordStart + prefix.length + suggestion.value.length + suffix.length
 
-            onChange({ target: { value: newValue } })
+            // Update internal state immediately (no flicker)
+            setInternalValue(newValue)
             setIsVisible(false)
 
-            // Reset focus and cursor
-            setTimeout(() => {
-                el.focus()
-                const newPos = wordStart + prefix.length + suggestion.value.length + 2 // +2 for ', '
-                el.setSelectionRange(newPos, newPos)
-                scrollToCaret()
-            }, 0)
+            // Set cursor position immediately
+            requestAnimationFrame(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.setSelectionRange(newCursorPos, newCursorPos)
+                    textareaRef.current.focus()
+                    scrollToCaret()
+                }
+            })
+
+            // Debounce external onChange to avoid re-render resetting cursor
+            if (onChangeTimerRef.current) clearTimeout(onChangeTimerRef.current)
+            onChangeTimerRef.current = setTimeout(() => {
+                onChange({ target: { value: newValue } })
+            }, 50)
         }
     }
 

@@ -347,11 +347,11 @@
         "deleted": "削除しました"
     },
     "resolutions": {
-        "portrait": "縦長 (832×1216)",
-        "landscape": "横長 (1216×832)",
-        "square": "正方形 (1024×1024)",
-        "tallPortrait": "縦長大 (640×1536)",
-        "wideLandscape": "横長大 (1536×640)",
+        "portrait": "縦長",
+        "landscape": "横長",
+        "square": "正方形",
+        "tallPortrait": "縦長大",
+        "wideLandscape": "横長大",
         "custom": "カスタム",
         "addCustom": "カスタム解像度を追加",
         "addCustomDesc": "新しい解像度プリセットを追加します",

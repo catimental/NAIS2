@@ -375,11 +375,11 @@
         "deleted": "삭제 완료"
     },
     "resolutions": {
-        "portrait": "세로 (832×1216)",
-        "landscape": "가로 (1216×832)",
-        "square": "정사각형 (1024×1024)",
-        "tallPortrait": "긴 세로 (640×1536)",
-        "wideLandscape": "넓은 가로 (1536×640)",
+        "portrait": "세로",
+        "landscape": "가로",
+        "square": "정사각형",
+        "tallPortrait": "긴 세로",
+        "wideLandscape": "넓은 가로",
         "custom": "커스텀",
         "addCustom": "커스텀 해상도 추가",
         "addCustomDesc": "새로운 해상도 프리셋을 추가합니다",
