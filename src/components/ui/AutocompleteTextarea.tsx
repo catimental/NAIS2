@@ -100,13 +100,6 @@ export function AutocompleteTextarea({
         const match = left.match(/[^,\n:]*$/)
         return match ? match[0].trimStart() : ''
     }
-    
-    // Get word start position for tag insertion (accounts for :: prefix)
-    const getWordStartPos = (text: string, position: number): number => {
-        const left = text.slice(0, position)
-        const match = left.match(/[^,\n:]*$/)
-        return match ? match.index! : position
-    }
 
     // `<` 이후의 와일드카드 이름 추출
     const getWildcardWord = (text: string, position: number): string | null => {

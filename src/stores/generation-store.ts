@@ -91,12 +91,9 @@ interface GenerationState {
     smea: boolean
     smeaDyn: boolean
     variety: boolean
-    qualityToggle: boolean
-    ucPreset: number // 0=Heavy, 1=Light, 2=Furry, 3=Human, 4=None
 
     seed: number
     seedLocked: boolean
-    previewSeed: number | null // Seed to display for history images (does not affect generation)
     selectedResolution: Resolution
 
     // Batch generation
@@ -143,12 +140,9 @@ interface GenerationState {
     setSmea: (v: boolean) => void
     setSmeaDyn: (v: boolean) => void
     setVariety: (v: boolean) => void
-    setQualityToggle: (v: boolean) => void
-    setUcPreset: (v: number) => void
 
     setSeed: (seed: number) => void
     setSeedLocked: (locked: boolean) => void
-    setPreviewSeed: (seed: number | null) => void
     setSelectedResolution: (resolution: Resolution) => void
 
     setBatchCount: (count: number) => void
@@ -192,8 +186,6 @@ export const useGenerationStore = create<GenerationState>()(
             smea: true,
             smeaDyn: true,
             variety: false,
-            qualityToggle: false,
-            ucPreset: 0,
 
             seed: Math.floor(Math.random() * 4294967295),
             seedLocked: false,
@@ -216,7 +208,6 @@ export const useGenerationStore = create<GenerationState>()(
             generatingMode: null,
             isCancelled: false,
             previewImage: null,
-            previewSeed: null,
             history: [],
             abortController: null,
             streamProgress: 0,
@@ -237,12 +228,9 @@ export const useGenerationStore = create<GenerationState>()(
             setSmea: (smea) => set({ smea }),
             setSmeaDyn: (smeaDyn) => set({ smeaDyn }),
             setVariety: (variety) => set({ variety }),
-            setQualityToggle: (qualityToggle) => set({ qualityToggle }),
-            setUcPreset: (ucPreset) => set({ ucPreset }),
 
             setSeed: (seed) => set({ seed }),
             setSeedLocked: (locked) => set({ seedLocked: locked }),
-            setPreviewSeed: (previewSeed) => set({ previewSeed }),
             setSelectedResolution: (resolution) => set({ selectedResolution: resolution }),
 
             setBatchCount: (count) => set({ batchCount: count }),
@@ -271,7 +259,6 @@ export const useGenerationStore = create<GenerationState>()(
                 const {
                     basePrompt, additionalPrompt, detailPrompt, negativePrompt, inpaintingPrompt,
                     model, steps, cfgScale, cfgRescale, sampler, scheduler, smea, smeaDyn, variety,
-                    qualityToggle, ucPreset,
                     selectedResolution, seed, batchCount, lastGenerationTime,
                     sourceImage, strength, noise, mask
                 } = get()
@@ -305,8 +292,7 @@ export const useGenerationStore = create<GenerationState>()(
                     generatingMode: 'main',
                     isCancelled: false,
                     abortController,
-                    estimatedTime: lastGenerationTime ? lastGenerationTime * batchCount : null,
-                    previewSeed: null
+                    estimatedTime: lastGenerationTime ? lastGenerationTime * batchCount : null
                 })
 
                 try {
@@ -389,8 +375,6 @@ export const useGenerationStore = create<GenerationState>()(
                             smea,
                             smea_dyn: smeaDyn,
                             variety,
-                            qualityToggle,
-                            ucPreset,
                             seed: currentSeed,
 
                             // I2I & Inpainting
@@ -475,7 +459,6 @@ export const useGenerationStore = create<GenerationState>()(
                             // Save Image: Try Tauri FS first, fallback to browser
                             const { savePath, autoSave, useAbsolutePath } = useSettingsStore.getState()
 
-
                             if (autoSave) {
                                 try {
                                     const binaryString = atob(result.imageData)
@@ -531,26 +514,6 @@ export const useGenerationStore = create<GenerationState>()(
                                     document.body.appendChild(link)
                                     link.click()
                                     document.body.removeChild(link)
-                                }
-                            } else {
-                                // Auto-save OFF: Dispatch memory-only event
-                                let typePrefix = ''
-                                if (mask) {
-                                    typePrefix = 'INPAINT_'
-                                } else if (sourceImage) {
-                                    typePrefix = 'I2I_'
-                                }
-                                const fileName = `NAIS_${typePrefix}${Date.now()}.png`
-                                const memoryPath = `memory://${fileName}`
-
-                                console.log('[Generate] Auto-save OFF, dispatching memory image:', memoryPath)
-
-                                try {
-                                    window.dispatchEvent(new CustomEvent('newImageGenerated', {
-                                        detail: { path: memoryPath, data: imageUrl }
-                                    }))
-                                } catch (e) {
-                                    console.warn('Failed to dispatch newImageGenerated event (Memory):', e)
                                 }
                             }
 
@@ -635,8 +598,6 @@ export const useGenerationStore = create<GenerationState>()(
                 smea: state.smea,
                 smeaDyn: state.smeaDyn,
                 variety: state.variety,
-                qualityToggle: state.qualityToggle,
-                ucPreset: state.ucPreset,
                 // Seed - only save if locked
                 ...(state.seedLocked ? { seed: state.seed } : {}),
                 seedLocked: state.seedLocked,
