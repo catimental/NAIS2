@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useShortcutStore, matchesBinding, ShortcutAction } from '@/stores/shortcut-store'
 import { useGenerationStore } from '@/stores/generation-store'
+import { useFragmentStore } from '@/stores/fragment-store'
 
 // 커스텀 이벤트 (다이얼로그 열기용)
 export const SHORTCUT_EVENTS = {
@@ -11,6 +12,7 @@ export const SHORTCUT_EVENTS = {
     OPEN_IMAGE_REFERENCE: 'shortcut:openImageReference',
     OPEN_CHARACTER_PROMPT: 'shortcut:openCharacterPrompt',
     OPEN_PRESET_DIALOG: 'shortcut:openPresetDialog',
+    RESET_FRAGMENT_COUNTERS: 'shortcut:resetFragmentCounters',
 }
 
 export function useShortcuts() {
@@ -20,6 +22,7 @@ export function useShortcuts() {
     const generate = useGenerationStore(state => state.generate)
     const cancelGeneration = useGenerationStore(state => state.cancelGeneration)
     const isGenerating = useGenerationStore(state => state.isGenerating)
+    const resetSequentialCounter = useFragmentStore(state => state.resetSequentialCounter)
 
     useEffect(() => {
         if (!enabled) return
@@ -40,6 +43,7 @@ export function useShortcuts() {
                 'open:characterPrompt',
                 'open:presetDialog',
                 'action:generate',
+                'action:resetFragmentCounters',
             ]
 
             for (const action of actions) {
@@ -111,11 +115,19 @@ export function useShortcuts() {
                             return
                         }
                     }
+
+                    // 순차 카운터 리셋
+                    if (action === 'action:resetFragmentCounters') {
+                        e.preventDefault()
+                        resetSequentialCounter()
+                        window.dispatchEvent(new CustomEvent(SHORTCUT_EVENTS.RESET_FRAGMENT_COUNTERS))
+                        return
+                    }
                 }
             }
         }
 
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [bindings, enabled, navigate, location.pathname, generate, cancelGeneration, isGenerating])
+    }, [bindings, enabled, navigate, location.pathname, generate, cancelGeneration, isGenerating, resetSequentialCounter])
 }

@@ -491,7 +491,8 @@
             "imageReference": "イメージ参照",
             "characterPrompt": "キャラクタープロンプト",
             "presetDialog": "プリセット管理",
-            "generate": "画像生成"
+            "generate": "画像生成",
+            "resetFragmentCounters": "シーケンシャルカウンターをリセット"
         }
     },
     "tools": {
@@ -621,6 +622,15 @@
         "exported": "保存完了",
         "exportedDesc": "{{name}}.txtとして保存されました。",
         "importError": "ファイルの読み込み中にエラーが発生しました。",
-        "exportError": "ファイルの保存中にエラーが発生しました。"
+        "exportError": "ファイルの保存中にエラーが発生しました。",
+        "exportAll": "全体エクスポート (JSON)",
+        "importAll": "全体インポート (JSON)",
+        "importExport": "インポート/エクスポート",
+        "importAllJson": "全体インポート (JSON)",
+        "exportedAll": "全体エクスポート完了",
+        "exportedAllDesc": "{{count}}件のファイルをエクスポートしました。",
+        "importedAll": "全体インポート完了",
+        "importedAllDesc": "{{count}}件のファイルをインポートしました。",
+        "importAllError": "JSONファイルのインポート中にエラーが発生しました。"
     }
 }

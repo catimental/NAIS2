@@ -425,11 +425,18 @@ export const useGenerationStore = create<GenerationState>()(
                         if (canUseStreaming) {
                             console.log('[Generate] Using streaming API...')
                             result = await generateImageStream(token, generationParams, (progress, partialImage) => {
-                                // Only update progress when preview image arrives (smoother like Scene mode)
+                                // Only update state when preview image arrives (reduces re-renders)
                                 if (partialImage) {
+                                    // Clear previous preview before setting new one to help GC
+                                    set({ previewImage: null })
                                     set({ streamProgress: progress, previewImage: `data:image/png;base64,${partialImage}` })
+                                } else {
+                                    // Update progress only
+                                    set({ streamProgress: progress })
                                 }
                             })
+                            // Clear streaming preview after completion
+                            set({ streamProgress: 0 })
                         } else {
                             console.log('[Generate] Using standard API...')
                             result = await generateImage(token, generationParams)

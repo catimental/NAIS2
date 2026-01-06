@@ -491,7 +491,8 @@
             "imageReference": "Image Reference",
             "characterPrompt": "Character Prompt",
             "presetDialog": "Preset Manager",
-            "generate": "Generate Image"
+            "generate": "Generate Image",
+            "resetFragmentCounters": "Reset Sequential Counters"
         }
     },
     "tools": {
@@ -600,7 +601,16 @@
         "exported": "Export Complete",
         "exportedDesc": "Saved as {{name}}.txt.",
         "importError": "An error occurred while importing the file.",
-        "exportError": "An error occurred while saving the file."
+        "exportError": "An error occurred while saving the file.",
+        "exportAll": "Export All (JSON)",
+        "importAll": "Import All (JSON)",
+        "importExport": "Import/Export",
+        "importAllJson": "Import All (JSON)",
+        "exportedAll": "Export All Complete",
+        "exportedAllDesc": "{{count}} file(s) exported.",
+        "importedAll": "Import All Complete",
+        "importedAllDesc": "{{count}} file(s) imported.",
+        "importAllError": "An error occurred while importing the JSON file."
     },
     "characterPanel": {
         "title": "Character Prompts",

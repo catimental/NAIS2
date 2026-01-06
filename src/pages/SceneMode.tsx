@@ -293,7 +293,16 @@ export default function SceneMode() {
             })
 
             if (filePath) {
-                const content = JSON.stringify(activePreset, null, 2)
+                // 이미지 데이터 제외하고 씬 정보만 내보내기 (공유용)
+                const exportData = {
+                    ...activePreset,
+                    scenes: activePreset.scenes.map(scene => ({
+                        ...scene,
+                        images: [],  // 이미지 제거
+                        queueCount: 0  // 대기열도 초기화
+                    }))
+                }
+                const content = JSON.stringify(exportData, null, 2)
                 const encoder = new TextEncoder()
                 await writeFile(filePath, encoder.encode(content))
                 toast({ title: t('common.saved', '저장됨'), variant: 'success' })

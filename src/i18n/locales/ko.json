@@ -519,7 +519,8 @@
             "imageReference": "이미지 참조",
             "characterPrompt": "캐릭터 프롬프트",
             "presetDialog": "프리셋 관리",
-            "generate": "이미지 생성"
+            "generate": "이미지 생성",
+            "resetFragmentCounters": "순차 카운터 리셋"
         }
     },
     "languages": {
@@ -601,7 +602,16 @@
         "exported": "내보내기 완료",
         "exportedDesc": "{{name}}.txt 파일로 저장되었습니다.",
         "importError": "파일을 불러오는 중 오류가 발생했습니다.",
-        "exportError": "파일을 저장하는 중 오류가 발생했습니다."
+        "exportError": "파일을 저장하는 중 오류가 발생했습니다.",
+        "exportAll": "전체 내보내기 (JSON)",
+        "importAll": "전체 가져오기 (JSON)",
+        "importExport": "불러오기/내보내기",
+        "importAllJson": "전체 가져오기 (JSON)",
+        "exportedAll": "전체 내보내기 완료",
+        "exportedAllDesc": "{{count}}개 파일을 내보냈습니다.",
+        "importedAll": "전체 가져오기 완료",
+        "importedAllDesc": "{{count}}개 파일을 가져왔습니다.",
+        "importAllError": "JSON 파일을 가져오는 중 오류가 발생했습니다."
     },
     "characterPanel": {
         "title": "캐릭터 프롬프트",

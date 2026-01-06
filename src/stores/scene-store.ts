@@ -443,11 +443,17 @@ export const useSceneStore = create<SceneState>()(
             streamingSceneId: null,
             streamingImage: null,
             streamingProgress: 0,
-            setStreamingData: (sceneId, image, progress) => set({
-                streamingSceneId: sceneId,
-                streamingImage: image,
-                streamingProgress: progress
-            }),
+            setStreamingData: (sceneId, image, progress) => {
+                // Clear previous image before setting new one to help GC
+                if (image !== null) {
+                    set({ streamingImage: null })
+                }
+                set({
+                    streamingSceneId: sceneId,
+                    streamingImage: image,
+                    streamingProgress: progress
+                })
+            },
 
             // History Refresh Trigger
             historyRefreshTrigger: 0,

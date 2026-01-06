@@ -133,9 +133,14 @@ interface FragmentState {
     getFolders: () => string[]
     getFilesInFolder: (folder: string) => FragmentFileMeta[]
 
+    // Actions - Reorder
+    reorderFiles: (files: FragmentFileMeta[]) => void
+
     // Import/Export
     importFromText: (name: string, text: string, folder?: string) => Promise<FragmentFile>
     exportToText: (id: string) => Promise<string | null>
+    exportAll: () => Promise<{ meta: FragmentFileMeta[], contents: Record<string, string[]> }>
+    importAll: (data: { meta: FragmentFileMeta[], contents: Record<string, string[]> }) => Promise<number>
 
     // Clear all data
     clearAll: () => Promise<void>
@@ -325,6 +330,10 @@ export const useFragmentStore = create<FragmentState>()(
                 return files.filter(f => f.folder === folder)
             },
 
+            reorderFiles: (newFiles) => {
+                set({ files: newFiles })
+            },
+
             importFromText: async (name, text, folder = '') => {
                 const lines = text
                     .split('\n')
@@ -338,6 +347,32 @@ export const useFragmentStore = create<FragmentState>()(
                 const content = await get().loadFileContent(id)
                 if (!content || content.length === 0) return null
                 return content.join('\n')
+            },
+
+            // 전체 내보내기 (폴더 구조 포함)
+            exportAll: async () => {
+                const { files, loadFileContent } = get()
+                const contents: Record<string, string[]> = {}
+                
+                for (const file of files) {
+                    contents[file.id] = await loadFileContent(file.id)
+                }
+                
+                return { meta: files, contents }
+            },
+
+            // 전체 가져오기 (기존 데이터에 추가)
+            importAll: async (data) => {
+                const { addFile } = get()
+                let importedCount = 0
+                
+                for (const meta of data.meta) {
+                    const content = data.contents[meta.id] || []
+                    await addFile(meta.name, meta.folder, content)
+                    importedCount++
+                }
+                
+                return importedCount
             },
 
             // 모든 데이터 삭제 (초기화)

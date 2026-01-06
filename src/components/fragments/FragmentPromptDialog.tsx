@@ -14,6 +14,13 @@ import {
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
@@ -24,6 +31,21 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { AutocompleteTextarea } from '@/components/ui/AutocompleteTextarea'
 import { useFragmentStore, FragmentFileMeta } from '@/stores/fragment-store'
+import {
+    DndContext,
+    closestCenter,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core'
+import {
+    SortableContext,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers'
 import {
     Plus,
     Trash2,
@@ -38,6 +60,8 @@ import {
     Puzzle,
     Upload,
     Download,
+    MoreHorizontal,
+    GripVertical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from '@/components/ui/use-toast'
@@ -61,6 +85,9 @@ export function FragmentPromptDialog({ open, onOpenChange }: FragmentPromptDialo
     const importFromText = useFragmentStore(state => state.importFromText)
     const exportToText = useFragmentStore(state => state.exportToText)
     const loadFileContent = useFragmentStore(state => state.loadFileContent)
+    const exportAll = useFragmentStore(state => state.exportAll)
+    const importAll = useFragmentStore(state => state.importAll)
+    const reorderFiles = useFragmentStore(state => state.reorderFiles)
 
     const [selectedFileId, setSelectedFileId] = useState<string | null>(null)
     const [editingContent, setEditingContent] = useState('')
@@ -267,6 +294,97 @@ export function FragmentPromptDialog({ open, onOpenChange }: FragmentPromptDialo
         }
     }
 
+    // 전체 내보내기 (JSON)
+    const handleExportAll = async () => {
+        try {
+            const { save } = await import('@tauri-apps/plugin-dialog')
+            const { writeTextFile } = await import('@tauri-apps/plugin-fs')
+
+            const data = await exportAll()
+            
+            const filePath = await save({
+                defaultPath: `NAIS_Fragments_${Date.now()}.json`,
+                filters: [{ name: 'JSON Files', extensions: ['json'] }],
+            })
+
+            if (!filePath) return
+
+            await writeTextFile(filePath, JSON.stringify(data, null, 2))
+
+            toast({
+                title: t('fragment.exportedAll', '전체 내보내기 완료'),
+                description: t('fragment.exportedAllDesc', '{{count}}개 파일을 내보냈습니다.', { count: data.meta.length }),
+            })
+        } catch (error) {
+            console.error('Failed to export all:', error)
+            toast({
+                variant: 'destructive',
+                title: t('common.error', '오류'),
+                description: t('fragment.exportError', '파일을 저장하는 중 오류가 발생했습니다.'),
+            })
+        }
+    }
+
+    // 전체 가져오기 (JSON)
+    const handleImportAll = async () => {
+        try {
+            const { open } = await import('@tauri-apps/plugin-dialog')
+            const { readTextFile } = await import('@tauri-apps/plugin-fs')
+
+            const selected = await open({
+                multiple: false,
+                filters: [{ name: 'JSON Files', extensions: ['json'] }],
+            })
+
+            if (!selected || Array.isArray(selected)) return
+
+            const content = await readTextFile(selected)
+            const data = JSON.parse(content)
+
+            // 데이터 유효성 검사
+            if (!data.meta || !Array.isArray(data.meta) || !data.contents) {
+                throw new Error('Invalid format')
+            }
+
+            const importedCount = await importAll(data)
+
+            toast({
+                title: t('fragment.importedAll', '전체 가져오기 완료'),
+                description: t('fragment.importedAllDesc', '{{count}}개 파일을 가져왔습니다.', { count: importedCount }),
+            })
+        } catch (error) {
+            console.error('Failed to import all:', error)
+            toast({
+                variant: 'destructive',
+                title: t('common.error', '오류'),
+                description: t('fragment.importAllError', 'JSON 파일을 가져오는 중 오류가 발생했습니다.'),
+            })
+        }
+    }
+
+    // dnd-kit sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        })
+    )
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event
+        if (over && active.id !== over.id) {
+            const oldIndex = files.findIndex(f => f.id === active.id)
+            const newIndex = files.findIndex(f => f.id === over.id)
+            if (oldIndex !== -1 && newIndex !== -1) {
+                const newFiles = [...files]
+                const [removed] = newFiles.splice(oldIndex, 1)
+                newFiles.splice(newIndex, 0, removed)
+                reorderFiles(newFiles)
+            }
+        }
+    }
+
     // 폴더별 파일 그룹화
     const filesByFolder: Record<string, FragmentFileMeta[]> = { '': [] }
     folders.forEach(f => { filesByFolder[f] = [] })
@@ -342,14 +460,28 @@ export function FragmentPromptDialog({ open, onOpenChange }: FragmentPromptDialo
                                 <RotateCcw className="h-4 w-4" />
                             </Button>
                             <div className="flex-1" />
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleImportTxt}
-                                title={t('fragment.importTxt', 'txt 파일 불러오기')}
-                            >
-                                <Upload className="h-4 w-4" />
-                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" title={t('fragment.importExport', '불러오기/내보내기')}>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={handleImportTxt}>
+                                        <Upload className="h-4 w-4 mr-2" />
+                                        {t('fragment.importTxt', 'txt 파일 불러오기')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={handleImportAll}>
+                                        <Upload className="h-4 w-4 mr-2" />
+                                        {t('fragment.importAllJson', '전체 불러오기 (JSON)')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={handleExportAll} disabled={files.length === 0}>
+                                        <Download className="h-4 w-4 mr-2" />
+                                        {t('fragment.exportAll', '전체 내보내기 (JSON)')}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
 
                         {isCreatingFolder && (
@@ -372,44 +504,56 @@ export function FragmentPromptDialog({ open, onOpenChange }: FragmentPromptDialo
                         )}
 
                         <ScrollArea className="flex-1">
-                            <div className="p-2">
-                                {/* 루트 파일들 */}
-                                {filesByFolder['']?.map(file => (
-                                    <FileItem
-                                        key={file.id}
-                                        file={file}
-                                        isSelected={selectedFileId === file.id}
-                                        onSelect={() => handleSelectFile(file)}
-                                        onDelete={() => handleDeleteFile(file.id)}
-                                        onDuplicate={() => handleDuplicateFile(file.id)}
-                                    />
-                                ))}
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={handleDragEnd}
+                                modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                            >
+                                <div className="p-2">
+                                    {/* 루트 파일들 */}
+                                    <SortableContext
+                                        items={filesByFolder['']?.map(f => f.id) || []}
+                                        strategy={verticalListSortingStrategy}
+                                    >
+                                        {filesByFolder['']?.map(file => (
+                                            <SortableFileItem
+                                                key={file.id}
+                                                file={file}
+                                                isSelected={selectedFileId === file.id}
+                                                onSelect={() => handleSelectFile(file)}
+                                                onDelete={() => handleDeleteFile(file.id)}
+                                                onDuplicate={() => handleDuplicateFile(file.id)}
+                                            />
+                                        ))}
+                                    </SortableContext>
 
-                                {/* 폴더들 */}
-                                {folders.map(folder => (
-                                    <FolderItem
-                                        key={folder}
-                                        folder={folder}
-                                        files={filesByFolder[folder] || []}
-                                        isExpanded={expandedFolders.has(folder)}
-                                        selectedFileId={selectedFileId}
-                                        onToggle={() => toggleFolder(folder)}
-                                        onSelectFile={handleSelectFile}
-                                        onDeleteFile={handleDeleteFile}
-                                        onDuplicateFile={handleDuplicateFile}
-                                        onDeleteFolder={() => handleDeleteFolder(folder)}
-                                        onAddFile={() => handleCreateFile(folder)}
-                                    />
-                                ))}
+                                    {/* 폴더들 */}
+                                    {folders.map(folder => (
+                                        <FolderItem
+                                            key={folder}
+                                            folder={folder}
+                                            files={filesByFolder[folder] || []}
+                                            isExpanded={expandedFolders.has(folder)}
+                                            selectedFileId={selectedFileId}
+                                            onToggle={() => toggleFolder(folder)}
+                                            onSelectFile={handleSelectFile}
+                                            onDeleteFile={handleDeleteFile}
+                                            onDuplicateFile={handleDuplicateFile}
+                                            onDeleteFolder={() => handleDeleteFolder(folder)}
+                                            onAddFile={() => handleCreateFile(folder)}
+                                        />
+                                    ))}
 
-                                {files.length === 0 && (
-                                    <div className="text-center text-muted-foreground text-sm py-8">
-                                        {t('fragment.noFiles', '조각 프롬프트가 없습니다.')}
-                                        <br />
-                                        {t('fragment.createFirst', '+ 버튼으로 새 파일을 만드세요.')}
-                                    </div>
-                                )}
-                            </div>
+                                    {files.length === 0 && (
+                                        <div className="text-center text-muted-foreground text-sm py-8">
+                                            {t('fragment.noFiles', '조각 프롬프트가 없습니다.')}
+                                            <br />
+                                            {t('fragment.createFirst', '+ 버튼으로 새 파일을 만드세요.')}
+                                        </div>
+                                    )}
+                                </div>
+                            </DndContext>
                         </ScrollArea>
                     </div>
 
@@ -503,7 +647,79 @@ export function FragmentPromptDialog({ open, onOpenChange }: FragmentPromptDialo
     )
 }
 
-// 파일 아이템 컴포넌트 (우클릭 메뉴 지원)
+// Sortable 파일 아이템 컴포넌트
+function SortableFileItem({
+    file,
+    isSelected,
+    onSelect,
+    onDelete,
+    onDuplicate,
+}: {
+    file: FragmentFileMeta
+    isSelected: boolean
+    onSelect: () => void
+    onDelete: () => void
+    onDuplicate: () => void
+}) {
+    const { t } = useTranslation()
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: file.id })
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 1000 : undefined,
+    }
+
+    return (
+        <div ref={setNodeRef} style={style} {...attributes}>
+            <ContextMenu>
+                <ContextMenuTrigger asChild>
+                    <div
+                        className={cn(
+                            "flex items-center gap-1 px-2 py-1 rounded cursor-pointer transition-colors",
+                            isSelected ? "bg-primary/20" : "hover:bg-muted",
+                            isDragging && "ring-2 ring-primary"
+                        )}
+                        onClick={onSelect}
+                    >
+                        <div 
+                            className="p-1 -ml-1 cursor-grab hover:bg-muted/50 rounded active:cursor-grabbing touch-none"
+                            {...listeners}
+                        >
+                            <GripVertical className="h-4 w-4 text-muted-foreground/50 hover:text-muted-foreground" />
+                        </div>
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm flex-1 truncate">{file.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                            ({file.lineCount})
+                        </span>
+                    </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                    <ContextMenuItem onClick={onDuplicate}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        {t('common.copy', '복제')}
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={onDelete} className="text-destructive">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {t('common.delete', '삭제')}
+                    </ContextMenuItem>
+                </ContextMenuContent>
+            </ContextMenu>
+        </div>
+    )
+}
+
+// 파일 아이템 컴포넌트 (폴더 내부용 - 드래그 없음)
 function FileItem({
     file,
     isSelected,
@@ -521,10 +737,10 @@ function FileItem({
 
     return (
         <ContextMenu>
-            <ContextMenuTrigger>
+            <ContextMenuTrigger asChild>
                 <div
                     className={cn(
-                        "flex items-center gap-1 px-2 py-1 rounded cursor-pointer",
+                        "flex items-center gap-1 px-2 py-1 rounded cursor-pointer transition-colors",
                         isSelected ? "bg-primary/20" : "hover:bg-muted"
                     )}
                     onClick={onSelect}
@@ -551,7 +767,7 @@ function FileItem({
     )
 }
 
-// 폴더 아이템 컴포넌트 (우클릭 메뉴 지원)
+// 폴더 아이템 컴포넌트
 function FolderItem({
     folder,
     files,
@@ -580,9 +796,9 @@ function FolderItem({
     return (
         <div>
             <ContextMenu>
-                <ContextMenuTrigger>
+                <ContextMenuTrigger asChild>
                     <div
-                        className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted cursor-pointer"
+                        className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted cursor-pointer transition-colors"
                         onClick={onToggle}
                     >
                         {isExpanded ? (

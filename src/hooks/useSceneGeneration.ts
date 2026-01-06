@@ -166,12 +166,19 @@ export function useSceneGeneration() {
                 }
 
                 let result
+                let lastPreviewUpdate = 0
 
                 if (streamingView) {
-                    // Streaming Generation
+                    // Streaming Generation - throttle preview updates to reduce memory churn
                     result = await generateImageStream(token, params, (progress, image) => {
-                        if (image) {
+                        const now = Date.now()
+                        // Update preview at most every 500ms to reduce memory pressure
+                        if (image && (now - lastPreviewUpdate >= 500)) {
+                            lastPreviewUpdate = now
                             setStreamingData(scene.id, `data:image/png;base64,${image}`, progress / 100)
+                        } else if (!image) {
+                            // Progress-only update is fine
+                            setStreamingData(scene.id, null, progress / 100)
                         }
                     })
                 } else {

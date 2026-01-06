@@ -17,6 +17,7 @@ export type ShortcutAction =
     | 'open:characterPrompt'
     | 'open:presetDialog'
     | 'action:generate'
+    | 'action:resetFragmentCounters'
 
 // 단축키 바인딩 인터페이스
 export interface KeyBinding {
@@ -43,6 +44,7 @@ const DEFAULT_BINDINGS: Record<ShortcutAction, KeyBinding> = {
     'open:characterPrompt': { key: 'd', ctrl: true, label: 'Ctrl+D', description: 'shortcuts.actions.characterPrompt' },
     'open:presetDialog': { key: '`', ctrl: true, label: 'Ctrl+`', description: 'shortcuts.actions.presetDialog' },
     'action:generate': { key: 'Enter', ctrl: true, label: 'Ctrl+Enter', description: 'shortcuts.actions.generate' },
+    'action:resetFragmentCounters': { key: 'r', ctrl: true, shift: true, label: 'Ctrl+Shift+R', description: 'shortcuts.actions.resetFragmentCounters' },
 }
 
 interface ShortcutState {
@@ -165,4 +167,5 @@ export const SHORTCUT_ACTIONS: { action: ShortcutAction; category: string }[] = 
     { action: 'open:characterPrompt', category: 'dialog' },
     { action: 'open:presetDialog', category: 'dialog' },
     { action: 'action:generate', category: 'action' },
+    { action: 'action:resetFragmentCounters', category: 'action' },
 ]

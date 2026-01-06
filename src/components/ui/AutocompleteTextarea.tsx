@@ -89,9 +89,12 @@ export function AutocompleteTextarea({
     const [suggestionMode, setSuggestionMode] = useState<'tag' | 'wildcard'>('tag')
 
     // 외부 value가 변경되면 내부 state 동기화 (예: 프리셋 로드)
+    // 단, 내부값과 동일하면 동기화 스킵 (커서 점프 방지)
     useEffect(() => {
-        setInternalValue(value)
-    }, [value])
+        if (value !== internalValue) {
+            setInternalValue(value)
+        }
+    }, [value]) // internalValue는 의도적으로 dependency에서 제외
 
     // --- Helpers ---
     const getCurrentWord = (text: string, position: number) => {
