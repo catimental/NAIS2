@@ -104,7 +104,13 @@
         "presetDefault": "デフォルトプリセット",
         "deleteSelected": "選択削除",
         "moveToPreset": "プリセットへ移動",
-        "exportSelectedZip": "選択ZIPエクスポート"
+        "exportSelectedZip": "選択ZIPエクスポート",
+        "importJson": "JSONインポート",
+        "exportJson": "JSONエクスポート",
+        "thumbnailLayout": "サムネイル配置",
+        "deleteNonFavorites": "お気に入り以外を削除",
+        "deletedNonFavorites": "{{count}}枚の画像を削除しました",
+        "noImages": "生成された画像がありません"
     },
     "preset": {
         "default": "デフォルト",
@@ -383,7 +389,8 @@
         "dropHint": "画像をドラッグ＆ドロップして追加",
         "createStack": "スタック作成",
         "unstack": "スタック解除",
-        "stackCount": "{{count}}枚"
+        "stackCount": "{{count}}枚",
+        "import": "画像インポート"
     },
     "settingsPage": {
         "title": "設定",

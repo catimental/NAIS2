@@ -104,7 +104,13 @@
         "presetDefault": "기본 프리셋",
         "deleteSelected": "선택 삭제",
         "moveToPreset": "프리셋으로 이동",
-        "exportSelectedZip": "선택 ZIP"
+        "exportSelectedZip": "선택 ZIP",
+        "importJson": "JSON 불러오기",
+        "exportJson": "JSON 내보내기",
+        "thumbnailLayout": "썸네일 배치",
+        "deleteNonFavorites": "즐겨찾기 제외 삭제",
+        "deletedNonFavorites": "{{count}}개 이미지 삭제됨",
+        "noImages": "생성된 이미지가 없습니다"
     },
     "preset": {
         "default": "기본",
@@ -411,7 +417,8 @@
         "dropHint": "이미지를 드래그하여 추가하세요",
         "createStack": "스택 만들기",
         "unstack": "스택 해제",
-        "stackCount": "{{count}}개"
+        "stackCount": "{{count}}개",
+        "import": "이미지 불러오기"
     },
     "settingsPage": {
         "title": "설정",

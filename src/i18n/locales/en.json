@@ -104,7 +104,13 @@
         "presetDefault": "Default Preset",
         "deleteSelected": "Delete Selected",
         "moveToPreset": "Move to Preset",
-        "exportSelectedZip": "Export Selected ZIP"
+        "exportSelectedZip": "Export Selected ZIP",
+        "importJson": "Import JSON",
+        "exportJson": "Export JSON",
+        "thumbnailLayout": "Thumbnail Layout",
+        "deleteNonFavorites": "Delete Non-Favorites",
+        "deletedNonFavorites": "{{count}} images deleted",
+        "noImages": "No generated images"
     },
     "preset": {
         "default": "Default",
@@ -383,7 +389,8 @@
         "dropHint": "Drag and drop images to add",
         "createStack": "Create Stack",
         "unstack": "Unstack",
-        "stackCount": "{{count}}"
+        "stackCount": "{{count}}",
+        "import": "Import Images"
     },
     "settingsPage": {
         "title": "Settings",

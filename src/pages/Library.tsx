@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
     DndContext,
     pointerWithin,
@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next'
 import { mkdir, exists, writeFile, BaseDirectory } from '@tauri-apps/plugin-fs'
 import { pictureDir, join } from '@tauri-apps/api/path'
 import { toast } from '@/components/ui/use-toast'
-import { ImagePlus, X, Grid3x3, Edit3, Trash2, Layers, ArrowLeft, CheckSquare, FolderOpen } from 'lucide-react'
+import { ImagePlus, X, Grid3x3, Edit3, Trash2, Layers, ArrowLeft, CheckSquare, FolderOpen, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSettingsStore } from '@/stores/settings-store'
 
@@ -75,6 +75,7 @@ export default function Library() {
     const { libraryPath, useAbsoluteLibraryPath } = useSettingsStore()
     const [activeId, setActiveId] = useState<string | null>(null)
     const [isDraggingFile, setIsDraggingFile] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Get current view items (main library or inside a stack)
     const currentStack = currentStackId ? items.find(item => item.id === currentStackId) : null
@@ -345,6 +346,80 @@ export default function Library() {
         setGridColumns(next)
     }
 
+    // File import handler
+    const handleImportClick = () => {
+        fileInputRef.current?.click()
+    }
+
+    const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files
+        if (!files || files.length === 0) return
+
+        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
+        if (imageFiles.length === 0) return
+
+        try {
+            const picturePath = await pictureDir()
+            const relPath = libraryPath || 'NAIS_Library'
+            const libraryDir = useAbsoluteLibraryPath && libraryPath
+                ? libraryPath
+                : await join(picturePath, relPath)
+
+            // Ensure dir exists
+            if (useAbsoluteLibraryPath && libraryPath) {
+                if (!(await exists(libraryPath))) {
+                    await mkdir(libraryPath, { recursive: true })
+                }
+            } else {
+                if (!(await exists(relPath, { baseDir: BaseDirectory.Picture }))) {
+                    await mkdir(relPath, { baseDir: BaseDirectory.Picture })
+                }
+            }
+
+            let addedCount = 0
+            for (const file of imageFiles) {
+                const buffer = await file.arrayBuffer()
+                const uint8Array = new Uint8Array(buffer)
+                const ext = file.name.split('.').pop() || 'png'
+                const uuid = crypto.randomUUID()
+                const shortUuid = uuid.split('-')[0]
+                const baseName = file.name.replace(/\.[^.]+$/, '')
+                const fileName = `${baseName}_${shortUuid}.${ext}`
+                const newPath = await join(libraryDir, fileName)
+
+                if (useAbsoluteLibraryPath && libraryPath) {
+                    await writeFile(newPath, uint8Array)
+                } else {
+                    await writeFile(`${relPath}/${fileName}`, uint8Array, { baseDir: BaseDirectory.Picture })
+                }
+
+                const newItem: LibraryItem = {
+                    id: uuid,
+                    name: fileName.replace(`.${ext}`, ''),
+                    path: newPath,
+                    width: 0,
+                    height: 0,
+                    createdAt: Date.now()
+                }
+                addItem(newItem)
+                addedCount++
+            }
+
+            if (addedCount > 0) {
+                toast({
+                    title: t('library.added', '이미지 추가됨'),
+                    description: t('library.addedDesc', { count: addedCount }),
+                    variant: 'success'
+                })
+            }
+        } catch (error) {
+            console.error('File import failed:', error)
+            toast({ title: t('library.error', '가져오기 실패'), variant: 'destructive' })
+        }
+
+        e.target.value = ''
+    }
+
     return (
         <div
             className="h-full flex flex-col relative"
@@ -420,6 +495,25 @@ export default function Library() {
                             )}
                         </div>
                         <div className="flex items-center gap-3">
+                            {/* Hidden file input for image import */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                className="hidden"
+                                onChange={handleFileInputChange}
+                            />
+                            {/* Import Image Button */}
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-white/10" 
+                                onClick={handleImportClick}
+                                title={t('library.import', '이미지 불러오기')}
+                            >
+                                <Upload className="h-4 w-4" />
+                            </Button>
                             <Button 
                                 variant="ghost" 
                                 size="icon" 

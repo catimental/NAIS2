@@ -65,6 +65,9 @@ import {
     FolderInput,
     ArrowRight,
     Grid3x3,
+    Upload,
+    LayoutGrid,
+    LayoutList,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSceneStore } from '@/stores/scene-store'
@@ -104,6 +107,8 @@ export default function SceneMode() {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const gridColumns = useSceneStore(s => s.gridColumns)
     const setGridColumns = useSceneStore(s => s.setGridColumns)
+    const thumbnailLayout = useSceneStore(s => s.thumbnailLayout)
+    const setThumbnailLayout = useSceneStore(s => s.setThumbnailLayout)
 
     // Actions needed for SceneMode local logic
     const addScene = useSceneStore(s => s.addScene)
@@ -197,6 +202,38 @@ export default function SceneMode() {
 
     const [isDragOver, setIsDragOver] = useState(false)
     const dragCounter = useRef(0)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    // JSON Import via file picker
+    const handleImportClick = () => {
+        fileInputRef.current?.click()
+    }
+
+    const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files
+        if (!files || files.length === 0) return
+
+        let importedCount = 0
+        for (const file of Array.from(files)) {
+            if (file.name.toLowerCase().endsWith('.json')) {
+                try {
+                    const text = await file.text()
+                    const json = JSON.parse(text)
+                    importPreset(json)
+                    importedCount++
+                } catch (err) {
+                    console.error("Failed to parse preset JSON", err)
+                }
+            }
+        }
+
+        if (importedCount > 0) {
+            toast({ description: t('scene.imported', { count: importedCount }) })
+        }
+
+        // Reset input value to allow re-selecting same file
+        e.target.value = ''
+    }
 
     // --- Import Logic (DnD) ---
     const handleDragEnter = (e: React.DragEvent) => {
@@ -406,6 +443,19 @@ export default function SceneMode() {
                         <h1 className="text-2xl font-bold">{t('scene.title')}</h1>
                     </div>
                     <div className="flex gap-2">
+                        {/* Hidden file input for JSON import */}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".json"
+                            multiple
+                            className="hidden"
+                            onChange={handleFileInputChange}
+                        />
+                        {/* Import JSON Button */}
+                        <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-white/10 hover:bg-white/5" onClick={handleImportClick} disabled={isGenerating} title={t('scene.importJson', 'JSON 불러오기')}>
+                            <Upload className="h-4 w-4" />
+                        </Button>
                         {/* Edit Mode Toggle Button */}
                         <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-white/10 hover:bg-white/5" onClick={() => setEditMode(true)} disabled={scenes.length === 0 || isGenerating} title={t('scene.editMode', '편집 모드')}>
                             <Edit3 className="h-4 w-4" />
@@ -419,10 +469,7 @@ export default function SceneMode() {
                                 <ListX className="h-4 w-4" />
                             </Button>
                         </div>
-                        <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-white/10 hover:bg-white/5" onClick={handleExportJson} disabled={!activePreset || isGenerating} title="JSON">
-                            <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-white/10 hover:bg-white/5" onClick={handleExportZip} disabled={scenes.length === 0} title={t('scene.exportZip')}>
+                        <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-white/10 hover:bg-white/5" onClick={handleExportJson} disabled={!activePreset || isGenerating} title={t('scene.exportJson', 'JSON 내보내기')}>
                             <Download className="h-4 w-4" />
                         </Button>
                     </div>
@@ -527,6 +574,15 @@ export default function SceneMode() {
 
 
                 <div className="flex items-center gap-2 ml-auto">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-white/10" 
+                        onClick={() => setThumbnailLayout(thumbnailLayout === 'vertical' ? 'horizontal' : 'vertical')} 
+                        title={t('scene.thumbnailLayout', '썸네일 배치')}
+                    >
+                        {thumbnailLayout === 'vertical' ? <LayoutGrid className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
+                    </Button>
                     <Button variant="ghost" size="sm" className="h-9 text-muted-foreground hover:text-foreground hover:bg-white/10" onClick={handleToggleGrid} title={t('scene.gridColumns', { count: gridColumns })}>
                         <Grid3x3 className="h-4 w-4 mr-1.5" />
                         <span className="font-medium text-sm">{gridColumns}</span>
@@ -564,7 +620,7 @@ export default function SceneMode() {
                                         disabled={isGenerating}
                                     />
                                 ))}
-                                <button onClick={!isGenerating ? handleAddScene : undefined} className={cn("flex flex-col items-center justify-center h-full aspect-[3/4] rounded-2xl border-2 border-dashed border-white/10 bg-white/5 hover:bg-white/10 hover:border-primary/50 transition-all group", isGenerating && "opacity-50 cursor-not-allowed")}>
+                                <button onClick={!isGenerating ? handleAddScene : undefined} className={cn("flex flex-col items-center justify-center h-full rounded-2xl border-2 border-dashed border-white/10 bg-white/5 hover:bg-white/10 hover:border-primary/50 transition-all group", thumbnailLayout === 'vertical' ? "aspect-[2/3]" : "aspect-[3/2]", isGenerating && "opacity-50 cursor-not-allowed")}>
                                     <div className="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"> <Plus className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" /> </div>
                                     <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors"> {t('scene.addScene')} </span>
                                 </button>
@@ -605,6 +661,7 @@ const SceneCardItem = memo(function SceneCardItem({ scene, onClick, disabled = f
     const activePresetId = useSceneStore(s => s.activePresetId)
     const isEditMode = useSceneStore(s => s.isEditMode)
     const isSelected = useSceneStore(s => s.selectedSceneIds.includes(scene.id))
+    const thumbnailLayout = useSceneStore(s => s.thumbnailLayout)
     
     // Subscribe to queueCount directly for fast updates (bypasses memo)
     const queueCount = useSceneStore(s => {
@@ -701,7 +758,8 @@ const SceneCardItem = memo(function SceneCardItem({ scene, onClick, disabled = f
                 <div
                     style={style}
                     className={cn(
-                        "group relative flex flex-col aspect-[3/4] rounded-2xl overflow-hidden",
+                        "group relative flex flex-col rounded-2xl overflow-hidden",
+                        thumbnailLayout === 'vertical' ? "aspect-[2/3]" : "aspect-[3/2]",
                         "bg-card border border-border/50 shadow-sm",
                         !isOverlay && "hover:shadow-lg hover:border-primary/30 transition-shadow",
                         isOverlay && "shadow-xl ring-2 ring-primary cursor-grabbing z-50",

@@ -13,7 +13,8 @@ import {
     Plus,
     X,
     Pencil,
-    Star
+    Star,
+    Trash2
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { AutocompleteTextarea } from "@/components/ui/AutocompleteTextarea";
@@ -27,6 +28,7 @@ import { ImageReferenceDialog } from '@/components/metadata/ImageReferenceDialog
 import { pictureDir, join } from '@tauri-apps/api/path'
 import { exists, readFile } from '@tauri-apps/plugin-fs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from '@/components/ui/use-toast'
 
 export default function SceneDetail() {
     const { id: sceneId } = useParams()
@@ -43,6 +45,7 @@ export default function SceneDetail() {
         renameScene,
         toggleFavorite,
         deleteImage,
+        deleteNonFavoriteImages,
         incrementQueue,
         decrementQueue,
         validateSceneImages,
@@ -79,6 +82,7 @@ export default function SceneDetail() {
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
     const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null)
     const { streamingSceneId, streamingImage, streamingProgress } = useSceneStore()
+    const thumbnailLayout = useSceneStore(s => s.thumbnailLayout)
 
     // Auto-save prompt logic - hooks must be before conditional return
     const updateScenePrompt = useSceneStore(state => state.updateScenePrompt)
@@ -364,6 +368,24 @@ export default function SceneDetail() {
                     </CardTitle>
                     <div className="flex items-center gap-2">
                         <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 rounded-lg gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                                if (activePresetId && sceneId) {
+                                    const count = deleteNonFavoriteImages(activePresetId, sceneId)
+                                    if (count > 0) {
+                                        toast({ description: t('scene.deletedNonFavorites', '{{count}}개 이미지 삭제됨', { count }) })
+                                    }
+                                }
+                            }}
+                            disabled={scene.images.filter(img => !img.isFavorite).length === 0}
+                            title={t('scene.deleteNonFavorites', '즐겨찾기 제외 삭제')}
+                        >
+                            <Trash2 className="h-3 w-3" />
+                            {t('scene.deleteNonFavorites', '즐겨찾기 제외 삭제')}
+                        </Button>
+                        <Button
                             variant={showFavoritesOnly ? "default" : "outline"}
                             size="sm"
                             className="h-7 rounded-lg gap-1"
@@ -384,7 +406,7 @@ export default function SceneDetail() {
                         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
                             {/* Streaming Card Slot */}
                             {isStreaming && streamingImage && (
-                                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-muted/30 relative border border-primary/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                                <div className={cn("rounded-xl overflow-hidden bg-muted/30 relative border border-primary/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]", thumbnailLayout === 'vertical' ? "aspect-[2/3]" : "aspect-[3/2]")}>
                                     <img src={streamingImage} alt="Generating..." className="w-full h-full object-cover animate-pulse opacity-80" />
                                     <div className="absolute inset-x-0 bottom-0 h-1 bg-gray-500/50">
                                         <div className="h-full bg-white transition-all duration-300 shadow-[0_0_8px_rgba(255,255,255,0.8)]" style={{ width: `${streamingProgress * 100}%` }} />
@@ -396,6 +418,7 @@ export default function SceneDetail() {
                                 <SceneImageCard
                                     key={image.id}
                                     image={image}
+                                    thumbnailLayout={thumbnailLayout}
                                     onDelete={() => deleteImage(activePresetId, scene.id, image.id)}
                                     onToggleFavorite={() => toggleFavorite(activePresetId, scene.id, image.id)}
                                     // Handlers for new context menu items
@@ -489,6 +512,7 @@ import { SceneImageContextMenu } from '@/components/scene/SceneImageContextMenu'
 
 function SceneImageCard({
     image,
+    thumbnailLayout,
     onToggleFavorite,
     onDelete,
     onAddRef,
@@ -496,6 +520,7 @@ function SceneImageCard({
     onImageClick,
 }: {
     image: SceneImage
+    thumbnailLayout: 'vertical' | 'horizontal'
     onToggleFavorite: () => void
     onDelete: () => void
     onAddRef?: () => void
@@ -548,7 +573,8 @@ function SceneImageCard({
         >
             <div
                 className={cn(
-                    "relative group aspect-[2/3] rounded-xl overflow-hidden bg-muted/30 border-2 transition-all duration-300 shadow-sm cursor-pointer",
+                    "relative group rounded-xl overflow-hidden bg-muted/30 border-2 transition-all duration-300 shadow-sm cursor-pointer",
+                    thumbnailLayout === 'vertical' ? "aspect-[2/3]" : "aspect-[3/2]",
                     image.isFavorite 
                         ? "border-yellow-500 ring-2 ring-yellow-500/30" 
                         : "border-border/50 hover:border-primary/50"

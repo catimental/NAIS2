@@ -1002,21 +1002,15 @@ export async function generateImageStream(
             return { success: false, error: '스트리밍 응답 없음' }
         }
 
-        // Helper function to convert binary to base64 using Blob (memory-efficient)
-        const binaryToBase64 = async (uint8: Uint8Array): Promise<string> => {
-            return new Promise((resolve, reject) => {
-                const buffer = uint8.buffer.slice(uint8.byteOffset, uint8.byteOffset + uint8.byteLength) as ArrayBuffer
-                const blob = new Blob([buffer], { type: 'application/octet-stream' })
-                const reader = new FileReader()
-                reader.onload = () => {
-                    const dataUrl = reader.result as string
-                    // Extract base64 part after "data:application/octet-stream;base64,"
-                    const base64 = dataUrl.split(',')[1] || ''
-                    resolve(base64)
-                }
-                reader.onerror = () => reject(reader.error)
-                reader.readAsDataURL(blob)
-            })
+        // Helper function to convert binary to base64 (chunk-safe, synchronous)
+        const binaryToBase64 = (uint8: Uint8Array): string => {
+            let binary = ''
+            const chunkSize = 32768
+            for (let i = 0; i < uint8.length; i += chunkSize) {
+                const chunk = uint8.subarray(i, Math.min(i + chunkSize, uint8.length))
+                binary += String.fromCharCode.apply(null, Array.from(chunk))
+            }
+            return btoa(binary)
         }
 
         // Read the streaming response and parse events in real-time
@@ -1059,7 +1053,7 @@ export async function generateImageStream(
                     buffer = buffer.slice(4 + length) // Remove processed data from buffer
 
                     try {
-                        const decoded = msgpackDecode(messageData) as Record<string, unknown>
+                        let decoded: Record<string, unknown> | null = msgpackDecode(messageData) as Record<string, unknown>
                         const eventType = decoded.event_type || decoded.event || 'unknown'
                         const stepIx = decoded.step_ix as number | undefined
 
@@ -1072,16 +1066,13 @@ export async function generateImageStream(
                         if (typeof stepIx === 'number') {
                             const progress = Math.round((stepIx / totalSteps) * 100)
 
-                            // Process image from event
-                            const imgField = decoded.image as Uint8Array | undefined
-
                             // Always update progress for smooth progress bar
                             if (eventType === 'intermediate') {
-                                // Show preview image every 3 steps to reduce memory churn
-                                // Also limit to steps that have actual image data
-                                if (imgField && imgField instanceof Uint8Array && stepIx >= lastStepShown + 3) {
+                                // Show preview image every 2 steps for smooth real-time preview
+                                const imgField = decoded.image as Uint8Array | undefined
+                                if (imgField && imgField instanceof Uint8Array && stepIx > lastStepShown + 1) {
                                     lastStepShown = stepIx
-                                    const previewBase64 = await binaryToBase64(imgField)
+                                    const previewBase64 = binaryToBase64(imgField)
                                     onProgress?.(progress, previewBase64)
                                 } else {
                                     // Update progress without image preview
@@ -1095,7 +1086,7 @@ export async function generateImageStream(
                             const imgField = decoded.image as Uint8Array | undefined
 
                             if (imgField && imgField instanceof Uint8Array) {
-                                finalImageData = await binaryToBase64(imgField)
+                                finalImageData = binaryToBase64(imgField)
                                 console.log('[Stream] Final image converted, length:', finalImageData.length)
                             }
 
@@ -1106,9 +1097,13 @@ export async function generateImageStream(
                         if (decoded.error || decoded.message) {
                             const errorMsg = (decoded.error || decoded.message) as string
                             console.error('[Stream] API Error:', errorMsg)
-                            reader.cancel() // Clean up reader
+                            decoded = null // Release reference before returning
+                            reader.cancel()
                             return { success: false, error: `API 오류: ${errorMsg}` }
                         }
+
+                        // Explicit reference release to help GC
+                        decoded = null
 
                     } catch (e) {
                         console.error('[Stream] Failed to decode message:', e)

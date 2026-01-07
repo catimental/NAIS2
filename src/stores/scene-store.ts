@@ -62,6 +62,7 @@ interface SceneState {
     addImageToScene: (presetId: string, sceneId: string, imageUrl: string) => void
     toggleFavorite: (presetId: string, sceneId: string, imageId: string) => void
     deleteImage: (presetId: string, sceneId: string, imageId: string) => void
+    deleteNonFavoriteImages: (presetId: string, sceneId: string) => number
     getSceneThumbnail: (scene: SceneCard) => string | undefined
 
     // Actions - Generation
@@ -108,6 +109,8 @@ interface SceneState {
     // Grid Layout
     gridColumns: number
     setGridColumns: (columns: number) => void
+    thumbnailLayout: 'vertical' | 'horizontal'
+    setThumbnailLayout: (layout: 'vertical' | 'horizontal') => void
 
     // Scroll Position (for returning from detail page)
     scrollPosition: number
@@ -417,6 +420,31 @@ export const useSceneStore = create<SceneState>()(
                 }))
             },
 
+            deleteNonFavoriteImages: (presetId, sceneId) => {
+                const preset = get().presets.find(p => p.id === presetId)
+                const scene = preset?.scenes.find(s => s.id === sceneId)
+                if (!scene) return 0
+                
+                const nonFavoriteCount = scene.images.filter(img => !img.isFavorite).length
+                
+                set(state => ({
+                    presets: state.presets.map(p =>
+                        p.id === presetId
+                            ? {
+                                ...p,
+                                scenes: p.scenes.map(s =>
+                                    s.id === sceneId
+                                        ? { ...s, images: s.images.filter(img => img.isFavorite) }
+                                        : s
+                                ),
+                            }
+                            : p
+                    ),
+                }))
+                
+                return nonFavoriteCount
+            },
+
             getSceneThumbnail: (scene) => {
                 // Priority: favorite > newest
                 const favorite = scene.images.find(img => img.isFavorite)
@@ -444,13 +472,10 @@ export const useSceneStore = create<SceneState>()(
             streamingImage: null,
             streamingProgress: 0,
             setStreamingData: (sceneId, image, progress) => {
-                // Clear previous image before setting new one to help GC
-                if (image !== null) {
-                    set({ streamingImage: null })
-                }
+                // If image is null, keep existing streamingImage (progress-only update)
                 set({
                     streamingSceneId: sceneId,
-                    streamingImage: image,
+                    streamingImage: image ?? get().streamingImage,
                     streamingProgress: progress
                 })
             },
@@ -749,6 +774,8 @@ export const useSceneStore = create<SceneState>()(
             // Grid Layout
             gridColumns: 4,
             setGridColumns: (columns) => set({ gridColumns: columns }),
+            thumbnailLayout: 'vertical' as const,
+            setThumbnailLayout: (layout) => set({ thumbnailLayout: layout }),
 
             // Scroll Position
             scrollPosition: 0,
@@ -765,6 +792,7 @@ export const useSceneStore = create<SceneState>()(
                 })),
                 activePresetId: state.activePresetId,
                 gridColumns: state.gridColumns,
+                thumbnailLayout: state.thumbnailLayout,
             }),
             onRehydrateStorage: () => (state) => {
                 if (state && !state.presets.find(p => p.id === DEFAULT_PRESET_ID)) {
