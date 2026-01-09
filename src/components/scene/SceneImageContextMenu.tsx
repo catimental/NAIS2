@@ -3,8 +3,9 @@ import {
     ContextMenuContent,
     ContextMenuItem,
     ContextMenuTrigger,
+    ContextMenuSeparator,
 } from '@/components/ui/context-menu'
-import { Copy, FolderOpen, Save, Trash2, Wand2, Users, FileSearch } from 'lucide-react'
+import { Copy, FolderOpen, Save, Trash2, Wand2, Users, FileSearch, Paintbrush, Image as ImageIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from '@/components/ui/use-toast'
 import { save } from '@tauri-apps/plugin-dialog'
@@ -12,6 +13,7 @@ import { writeFile, remove, readFile } from '@tauri-apps/plugin-fs'
 import { Command } from '@tauri-apps/plugin-shell'
 import { useNavigate } from 'react-router-dom'
 import { useToolsStore } from '@/stores/tools-store'
+import { useGenerationStore } from '@/stores/generation-store'
 import { SceneImage } from '@/stores/scene-store'
 
 interface SceneContextMenuProps {
@@ -20,12 +22,14 @@ interface SceneContextMenuProps {
     onDelete: () => void
     onAddRef?: () => void
     onLoadMetadata?: () => void
+    onInpaint?: (base64: string) => void
 }
 
-export function SceneImageContextMenu({ image, children, onDelete, onAddRef, onLoadMetadata }: SceneContextMenuProps) {
+export function SceneImageContextMenu({ image, children, onDelete, onAddRef, onLoadMetadata, onInpaint }: SceneContextMenuProps) {
     const { t } = useTranslation()
     const navigate = useNavigate()
     const { setActiveImage } = useToolsStore()
+    const { setSourceImage, setI2IMode } = useGenerationStore()
 
     // Determine file path. 
     // image.url is expected to be the full file path for saved images.
@@ -112,6 +116,43 @@ export function SceneImageContextMenu({ image, children, onDelete, onAddRef, onL
         }
     }
 
+    // Helper to get base64 data
+    const getImageBase64 = async (): Promise<string | null> => {
+        try {
+            if (isFile) {
+                const data = await readFile(image.url)
+                let binary = ''
+                const len = data.byteLength
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(data[i])
+                }
+                return `data:image/png;base64,${btoa(binary)}`
+            } else {
+                return image.url
+            }
+        } catch (e) {
+            console.error('Failed to get image data:', e)
+            return null
+        }
+    }
+
+    // Inpainting: Call parent callback with base64 data
+    const handleInpaint = async () => {
+        if (!onInpaint) return
+        const base64 = await getImageBase64()
+        if (!base64) return
+        onInpaint(base64)
+    }
+
+    const handleI2I = async () => {
+        const base64 = await getImageBase64()
+        if (!base64) return
+        
+        setSourceImage(base64)
+        setI2IMode('i2i')
+        navigate('/')
+    }
+
     const handleDelete = async () => {
         if (isFile) {
             try {
@@ -141,8 +182,18 @@ export function SceneImageContextMenu({ image, children, onDelete, onAddRef, onL
                 </ContextMenuItem>
                 <ContextMenuItem onClick={handleSmartTools}>
                     <Wand2 className="h-4 w-4 mr-2" />
-                    {t('smartTools.title', '스마트 툴 (Inpaint/Upscale)')}
+                    {t('smartTools.title', '스마트 툴')}
                 </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={handleInpaint} disabled={!onInpaint}>
+                    <Paintbrush className="h-4 w-4 mr-2" />
+                    {t('tools.inpainting.title', '인페인팅')}
+                </ContextMenuItem>
+                <ContextMenuItem onClick={handleI2I}>
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    {t('tools.i2i.title', 'Image to Image')}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
 
                 {onAddRef && (
                     <ContextMenuItem onClick={onAddRef}>

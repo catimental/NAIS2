@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState, useRef, useCallback, memo } from 'react'
-import { Clock, Trash2, FolderOpen, RefreshCw, FileSearch, Copy, RotateCcw, Save, Users, Image as ImageIcon, Paintbrush, Maximize2, Film, Zap } from 'lucide-react'
+import { Clock, Trash2, FolderOpen, RefreshCw, FileSearch, Copy, RotateCcw, Save, Users, Image as ImageIcon, Paintbrush, Maximize2, Film, Zap, ContextMenuSeparator as Separator } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useGenerationStore } from '@/stores/generation-store'
 import { useAuthStore } from '@/stores/auth-store'
@@ -24,7 +24,9 @@ import {
     ContextMenuContent,
     ContextMenuItem,
     ContextMenuTrigger,
+    ContextMenuSeparator,
 } from '@/components/ui/context-menu'
+import { InpaintingDialog } from '@/components/tools/InpaintingDialog'
 
 // Convert ArrayBuffer to base64 without stack overflow
 const arrayBufferToBase64 = (buffer: Uint8Array): string => {
@@ -57,7 +59,8 @@ interface HistoryImageItemProps {
     onRegenerate: (image: SavedImage) => void
     onOpenSmartTools: (image: SavedImage) => void
     onAddAsReference: (image: SavedImage) => void
-
+    onInpaint: (image: SavedImage) => void
+    onI2I: (image: SavedImage) => void
     onOpenFolder: (image: SavedImage) => void
     onLoadMetadata: (image: SavedImage) => void
     onLoadComplete: (path: string, data: string) => void
@@ -66,7 +69,7 @@ interface HistoryImageItemProps {
 const HistoryImageItem = memo(function HistoryImageItem({
     image, thumbnail, index, getTypeIcon,
     onImageClick, onDelete, onSaveAs, onCopy, onRegenerate,
-    onOpenSmartTools, onAddAsReference, onOpenFolder, onLoadMetadata,
+    onOpenSmartTools, onAddAsReference, onInpaint, onI2I, onOpenFolder, onLoadMetadata,
     onLoadComplete
 }: HistoryImageItemProps) {
     const { t } = useTranslation()
@@ -199,6 +202,16 @@ const HistoryImageItem = memo(function HistoryImageItem({
                     <Wand2 className="h-4 w-4 mr-2" />
                     {t('smartTools.title', '스마트 툴')}
                 </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => onInpaint(image)}>
+                    <Paintbrush className="h-4 w-4 mr-2" />
+                    {t('tools.inpainting.title', '인페인팅')}
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => onI2I(image)}>
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    {t('tools.i2i.title', 'Image to Image')}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => onAddAsReference(image)}>
                     <Users className="h-4 w-4 mr-2" />
                     {t('actions.addAsRef', '이미지 참조')}
@@ -218,7 +231,7 @@ const HistoryImageItem = memo(function HistoryImageItem({
 
 export function HistoryPanel() {
     const { t } = useTranslation()
-    const { setPreviewImage, isGenerating, setIsGenerating } = useGenerationStore()
+    const { setPreviewImage, isGenerating, setIsGenerating, setSourceImage, setI2IMode } = useGenerationStore()
     const { savePath, useAbsolutePath } = useSettingsStore()
     const [savedImages, setSavedImages] = useState<SavedImage[]>([])
     const [imageThumbnails, setImageThumbnails] = useState<Record<string, string>>({})
@@ -227,6 +240,9 @@ export function HistoryPanel() {
     const [selectedImageForMetadata, setSelectedImageForMetadata] = useState<string | undefined>()
     const [imageRefDialogOpen, setImageRefDialogOpen] = useState(false)
     const [selectedImageForRef, setSelectedImageForRef] = useState<string | null>(null)
+    // Inpainting dialog state
+    const [inpaintDialogOpen, setInpaintDialogOpen] = useState(false)
+    const [selectedImageForInpaint, setSelectedImageForInpaint] = useState<string | null>(null)
     const prevIsGenerating = useRef(isGenerating)
     const navigate = useNavigate()
     const { setActiveImage } = useToolsStore()
@@ -861,6 +877,42 @@ export function HistoryPanel() {
         setImageRefDialogOpen(true)
     }
 
+    // Inpainting: Open dialog directly with image (source/mode set when mask is saved)
+    const handleInpaint = async (image: SavedImage) => {
+        let imageData = imageThumbnails[image.path]
+        if (!imageData && !image.isTemporary) {
+            try {
+                const data = await readFile(image.path)
+                const base64 = arrayBufferToBase64(data)
+                imageData = `data:image/png;base64,${base64}`
+                setImageThumbnails(prev => ({ ...prev, [image.path]: imageData }))
+            } catch { return }
+        }
+        if (!imageData) return
+        
+        // Only open dialog - source/mode will be set when mask is saved
+        setSelectedImageForInpaint(imageData)
+        setInpaintDialogOpen(true)
+    }
+
+    // I2I: Set source and navigate to main mode
+    const handleI2I = async (image: SavedImage) => {
+        let imageData = imageThumbnails[image.path]
+        if (!imageData && !image.isTemporary) {
+            try {
+                const data = await readFile(image.path)
+                const base64 = arrayBufferToBase64(data)
+                imageData = `data:image/png;base64,${base64}`
+                setImageThumbnails(prev => ({ ...prev, [image.path]: imageData }))
+            } catch { return }
+        }
+        if (!imageData) return
+        
+        setSourceImage(imageData)
+        setI2IMode('i2i')
+        navigate('/')
+    }
+
     return (
         <div className="flex flex-col h-full">
             {/* Header */}
@@ -911,6 +963,8 @@ export function HistoryPanel() {
                                 onRegenerate={handleRegenerate}
                                 onOpenSmartTools={handleOpenSmartTools}
                                 onAddAsReference={handleAddAsReference}
+                                onInpaint={handleInpaint}
+                                onI2I={handleI2I}
                                 onOpenFolder={handleOpenFolder}
                                 onLoadMetadata={handleLoadMetadata}
                             />
@@ -932,6 +986,15 @@ export function HistoryPanel() {
                 open={imageRefDialogOpen}
                 onOpenChange={setImageRefDialogOpen}
                 imageBase64={selectedImageForRef}
+            />
+
+            <InpaintingDialog
+                open={inpaintDialogOpen}
+                onOpenChange={(open) => {
+                    setInpaintDialogOpen(open)
+                    if (!open) setSelectedImageForInpaint(null)
+                }}
+                sourceImage={selectedImageForInpaint}
             />
         </div>
     )

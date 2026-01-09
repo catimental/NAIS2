@@ -98,9 +98,11 @@ export function useSceneGeneration() {
                 // Get fresh generation store state
                 const genState = useGenerationStore.getState()
 
-                // Construct Prompt
+                // Construct Prompt (including inpaintingPrompt if in inpaint mode)
                 const parts = [
                     genState.basePrompt,
+                    // Add inpainting prompt after basePrompt (same as main mode)
+                    genState.i2iMode === 'inpaint' ? genState.inpaintingPrompt : null,
                     genState.additionalPrompt,
                     scene.scenePrompt,
                     genState.detailPrompt,
@@ -127,6 +129,27 @@ export function useSceneGeneration() {
                 // Determine Seed (Randomize if not locked)
                 const finalSeed = genState.seedLocked ? genState.seed : Math.floor(Math.random() * 4294967295)
 
+                // For I2I and Inpainting, use source image dimensions instead of scene/global resolution
+                let finalWidth = scene.width || genState.selectedResolution.width
+                let finalHeight = scene.height || genState.selectedResolution.height
+
+                if (genState.sourceImage) {
+                    // Extract dimensions from base64 image
+                    try {
+                        const img = new Image()
+                        await new Promise<void>((resolve, reject) => {
+                            img.onload = () => resolve()
+                            img.onerror = () => reject(new Error('Failed to load source image'))
+                            img.src = genState.sourceImage!
+                        })
+                        finalWidth = img.width
+                        finalHeight = img.height
+                        console.log(`[SceneGeneration] Using source image dimensions: ${finalWidth}x${finalHeight}`)
+                    } catch (e) {
+                        console.warn('[SceneGeneration] Failed to get source image dimensions, using scene/global resolution')
+                    }
+                }
+
                 const params: GenerationParams = {
                     prompt: finalPrompt,
                     negative_prompt: genState.negativePrompt,
@@ -140,11 +163,12 @@ export function useSceneGeneration() {
                     variety: genState.variety ?? false,
                     seed: finalSeed,
 
-                    width: scene.width || genState.selectedResolution.width,
-                    height: scene.height || genState.selectedResolution.height,
+                    width: finalWidth,
+                    height: finalHeight,
 
                     model: genState.model,
 
+                    // I2I / Inpainting parameters
                     sourceImage: genState.sourceImage || undefined,
                     strength: genState.strength,
                     noise: genState.noise,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ImageIcon, ImagePlus, Download, Copy, RotateCcw, Save, Users, FolderOpen } from 'lucide-react'
+import { ImageIcon, ImagePlus, Download, Copy, RotateCcw, Save, Users, FolderOpen, Paintbrush } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useGenerationStore } from '@/stores/generation-store'
 import { useAuthStore } from '@/stores/auth-store'
@@ -15,6 +15,7 @@ import {
     ContextMenuContent,
     ContextMenuItem,
     ContextMenuTrigger,
+    ContextMenuSeparator,
 } from '@/components/ui/context-menu'
 import { Command } from '@tauri-apps/plugin-shell'
 import { save } from '@tauri-apps/plugin-dialog'
@@ -23,6 +24,7 @@ import { writeFile, mkdir, exists, BaseDirectory } from '@tauri-apps/plugin-fs'
 import { useNavigate } from 'react-router-dom'
 import { useToolsStore } from '@/stores/tools-store'
 import { Wand2 } from 'lucide-react'
+import { InpaintingDialog } from '@/components/tools/InpaintingDialog'
 
 export default function MainMode() {
     const { t } = useTranslation()
@@ -37,6 +39,8 @@ export default function MainMode() {
         batchCount,
         currentBatch,
         streamProgress,
+        setSourceImage,
+        setI2IMode,
     } = useGenerationStore()
 
     const navigate = useNavigate()
@@ -46,6 +50,8 @@ export default function MainMode() {
     const [metadataImage, setMetadataImage] = useState<string | undefined>(undefined)
     const [isDragOver, setIsDragOver] = useState(false)
     const [imageRefDialogOpen, setImageRefDialogOpen] = useState(false)
+    // Inpainting dialog state
+    const [inpaintDialogOpen, setInpaintDialogOpen] = useState(false)
 
     // Get more store functions for regenerate with metadata
     const genStore = useGenerationStore()
@@ -268,6 +274,19 @@ export default function MainMode() {
         }
     }
 
+    // Inpainting: Open dialog directly (source/mode set when mask is saved)
+    const handleInpaint = () => {
+        if (!previewImage) return
+        setInpaintDialogOpen(true)
+    }
+
+    // I2I: Set source and stay on page (already in main mode)
+    const handleI2I = () => {
+        if (!previewImage) return
+        setSourceImage(previewImage)
+        setI2IMode('i2i')
+    }
+
     // Image Reference popup
     const handleAddAsReference = () => {
         if (previewImage) {
@@ -447,6 +466,16 @@ export default function MainMode() {
                                 <Wand2 className="h-4 w-4 mr-2" />
                                 {t('smartTools.title', '스마트 툴')}
                             </ContextMenuItem>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem onClick={handleInpaint}>
+                                <Paintbrush className="h-4 w-4 mr-2" />
+                                {t('tools.inpainting.title', '인페인팅')}
+                            </ContextMenuItem>
+                            <ContextMenuItem onClick={handleI2I}>
+                                <ImageIcon className="h-4 w-4 mr-2" />
+                                {t('tools.i2i.title', 'Image to Image')}
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
                             <ContextMenuItem onClick={handleAddAsReference}>
                                 <Users className="h-4 w-4 mr-2" />
                                 {t('actions.addAsRef', '이미지 참조')}
@@ -574,6 +603,13 @@ export default function MainMode() {
                 open={imageRefDialogOpen}
                 onOpenChange={setImageRefDialogOpen}
                 imageBase64={previewImage || null}
+            />
+
+            {/* Inpainting Dialog */}
+            <InpaintingDialog
+                open={inpaintDialogOpen}
+                onOpenChange={setInpaintDialogOpen}
+                sourceImage={previewImage}
             />
         </div>
     )

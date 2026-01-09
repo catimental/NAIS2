@@ -271,11 +271,19 @@ export const useGenerationStore = create<GenerationState>()(
             resetI2IParams: () => set({ sourceImage: null, mask: null, strength: 0.7, noise: 0.0, inpaintingPrompt: '', i2iMode: null }),
 
             cancelGeneration: () => {
-                const { abortController } = get()
+                const { abortController, seedLocked } = get()
                 if (abortController) {
                     abortController.abort()
                 }
-                set({ isCancelled: true, isGenerating: false, generatingMode: null, currentBatch: 0 })
+                // Generate new seed if not locked (same as successful generation)
+                const newSeed = seedLocked ? undefined : Math.floor(Math.random() * 4294967295)
+                set({ 
+                    isCancelled: true, 
+                    isGenerating: false, 
+                    generatingMode: null, 
+                    currentBatch: 0,
+                    ...(newSeed !== undefined && { seed: newSeed })
+                })
                 toast({
                     title: i18n.t('toast.generationCancelled.title'),
                     description: i18n.t('toast.generationCancelled.desc'),

@@ -25,6 +25,7 @@ import { useSceneGeneration } from '@/hooks/useSceneGeneration'
 import { Command } from '@tauri-apps/plugin-shell'
 import { MetadataDialog } from '@/components/metadata/MetadataDialog'
 import { ImageReferenceDialog } from '@/components/metadata/ImageReferenceDialog'
+import { InpaintingDialog } from '@/components/tools/InpaintingDialog'
 import { pictureDir, join } from '@tauri-apps/api/path'
 import { exists, readFile, remove } from '@tauri-apps/plugin-fs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -78,6 +79,8 @@ export default function SceneDetail() {
     const [selectedImageForMetadata, setSelectedImageForMetadata] = useState<string | undefined>()
     const [imageRefDialogOpen, setImageRefDialogOpen] = useState(false)
     const [selectedImageForRef, setSelectedImageForRef] = useState<string | null>(null)
+    const [inpaintDialogOpen, setInpaintDialogOpen] = useState(false)
+    const [selectedImageForInpaint, setSelectedImageForInpaint] = useState<string | null>(null)
     const [isEditingName, setIsEditingName] = useState(false)
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
     const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null)
@@ -136,6 +139,44 @@ export default function SceneDetail() {
             }
         }
     }, [localPrompt, scene, activePresetId, updateScenePrompt])
+
+    // Auto-validate images on mount - MUST be before conditional return to maintain hook order
+    useEffect(() => {
+        if (!scene || !activePresetId || !validateSceneImages) return
+
+        const validateImages = async () => {
+            if (scene.images.length === 0) return
+
+            const validImageIds: string[] = []
+            let hasChanges = false
+
+            for (const img of scene.images) {
+                try {
+                    // Check if url is a file path
+                    if (!img.url.startsWith('data:')) {
+                        if (await exists(img.url)) {
+                            validImageIds.push(img.id)
+                        } else {
+                            hasChanges = true
+                        }
+                    } else {
+                        // Keep base64 images
+                        validImageIds.push(img.id)
+                    }
+                } catch (e) {
+                    // If check fails, assume valid to be safe
+                    validImageIds.push(img.id)
+                }
+            }
+
+            // Only update if changes needed
+            if (hasChanges && validImageIds.length !== scene.images.length) {
+                validateSceneImages(activePresetId, scene.id, validImageIds)
+            }
+        }
+
+        validateImages()
+    }, [scene?.id, activePresetId, validateSceneImages])
 
     const handleBack = () => {
         // Save prompt immediately before leaving
@@ -232,45 +273,6 @@ export default function SceneDetail() {
             console.error("Failed to open folder:", error)
         }
     }
-
-    // Auto-validate images on mount
-    useEffect(() => {
-        if (!scene || !activePresetId || !validateSceneImages) return
-
-        const validateImages = async () => {
-            if (scene.images.length === 0) return
-
-            const validImageIds: string[] = []
-            let hasChanges = false
-
-            for (const img of scene.images) {
-                try {
-                    // Check if url is a file path
-                    if (!img.url.startsWith('data:')) {
-                        if (await exists(img.url)) {
-                            validImageIds.push(img.id)
-                        } else {
-                            hasChanges = true
-                        }
-                    } else {
-                        // Keep base64 images
-                        validImageIds.push(img.id)
-                    }
-                } catch (e) {
-                    // If check fails, assume valid to be safe
-                    validImageIds.push(img.id)
-                }
-            }
-
-            // Only update if changes needed
-            if (hasChanges && validImageIds.length !== scene.images.length) {
-                validateSceneImages(activePresetId, scene.id, validImageIds)
-            }
-        }
-
-        validateImages()
-    }, [scene?.id, activePresetId, validateSceneImages])
-
 
     const isStreaming = streamingSceneId === scene.id
 
@@ -482,6 +484,10 @@ export default function SceneDetail() {
                                             console.error("Failed to load metadata image", e)
                                         }
                                     }}
+                                    onInpaint={(base64) => {
+                                        setSelectedImageForInpaint(base64)
+                                        setInpaintDialogOpen(true)
+                                    }}
                                     onImageClick={(imgSrc) => setViewerImageSrc(imgSrc)}
                                 />
                             ))}
@@ -503,6 +509,15 @@ export default function SceneDetail() {
                 open={imageRefDialogOpen}
                 onOpenChange={setImageRefDialogOpen}
                 imageBase64={selectedImageForRef}
+            />
+
+            <InpaintingDialog
+                open={inpaintDialogOpen}
+                onOpenChange={(open) => {
+                    setInpaintDialogOpen(open)
+                    if (!open) setSelectedImageForInpaint(null)
+                }}
+                sourceImage={selectedImageForInpaint}
             />
 
             {/* Full-Screen Image Viewer Overlay */}
@@ -541,6 +556,7 @@ function SceneImageCard({
     onAddRef,
     onLoadMetadata,
     onImageClick,
+    onInpaint,
 }: {
     image: SceneImage
     thumbnailLayout: 'vertical' | 'horizontal'
@@ -549,6 +565,7 @@ function SceneImageCard({
     onAddRef?: () => void
     onLoadMetadata?: () => void
     onImageClick?: (imgSrc: string) => void
+    onInpaint?: (base64: string) => void
 }) {
     // SceneImageCard now just renders the image and overlay.
     // Logic for loading the image data is handled by the browser <img> tag directly using the file path (image.url).
@@ -593,6 +610,7 @@ function SceneImageCard({
             onDelete={onDelete}
             onAddRef={onAddRef}
             onLoadMetadata={onLoadMetadata}
+            onInpaint={onInpaint}
         >
             <div
                 className={cn(

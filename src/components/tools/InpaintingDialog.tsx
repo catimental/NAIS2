@@ -20,6 +20,7 @@ export function InpaintingDialog({ open, onOpenChange, sourceImage: propSourceIm
     const {
         setSourceImage,
         setMask,
+        setI2IMode,
         resetI2IParams,
         mask: existingMask
     } = useGenerationStore()
@@ -57,9 +58,6 @@ export function InpaintingDialog({ open, onOpenChange, sourceImage: propSourceIm
             setHistory([])
             setHistoryStep(-1)
             setImageSize(null)
-        } else if (propSourceImage) {
-            // Set source image in store
-            setSourceImage(propSourceImage)
         }
     }, [open, propSourceImage, resetI2IParams, setSourceImage])
 
@@ -268,14 +266,18 @@ export function InpaintingDialog({ open, onOpenChange, sourceImage: propSourceIm
         saveHistory() // Save empty canvas to history
     }
 
-    // Handle save mask button click - only saves mask, no generation
+    // Handle save mask button click - saves mask and sets up inpaint mode
     const handleSaveMask = () => {
         const canvas = canvasRef.current
         if (!canvas || !propSourceImage) return
 
         // Get mask data and save to store
         const maskDataUrl = canvas.toDataURL('image/png')
+        
+        // Set source image, mask, and mode together (triggers sidebar display)
+        setSourceImage(propSourceImage)
         setMask(maskDataUrl)
+        setI2IMode('inpaint')
 
         // Close dialog - mask is now saved in store
         onOpenChange(false)
