@@ -106,12 +106,12 @@ export function CharacterPromptPanel({ open, onOpenChange }: CharacterPromptPane
         })
     )
 
-    const { reorderCharacters } = useCharacterPromptStore()
-
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id as string)
         setExpandedId(null)
     }
+
+    const { reorderCharactersInGroup } = useCharacterPromptStore()
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event
@@ -135,12 +135,20 @@ export function CharacterPromptPanel({ open, onOpenChange }: CharacterPromptPane
             return
         }
         
-        // 같은 캐릭터끼리 순서 변경
-        if (active.id !== over.id) {
-            const oldIndex = characters.findIndex(c => c.id === active.id)
-            const newIndex = characters.findIndex(c => c.id === over.id)
-            if (oldIndex !== -1 && newIndex !== -1) {
-                reorderCharacters(oldIndex, newIndex)
+        // 캐릭터 위에 드롭한 경우
+        const activeChar = characters.find(c => c.id === activeCharId)
+        const overChar = characters.find(c => c.id === overId)
+        
+        if (activeChar && overChar) {
+            // 다른 그룹의 캐릭터 위에 드롭한 경우: 해당 그룹으로 이동
+            if (activeChar.groupId !== overChar.groupId) {
+                moveCharacterToGroup(activeCharId, overChar.groupId)
+                return
+            }
+            
+            // 같은 그룹 내에서 순서 변경
+            if (activeCharId !== overId) {
+                reorderCharactersInGroup(activeCharId, overId, activeChar.groupId)
             }
         }
     }
@@ -335,18 +343,14 @@ export function CharacterPromptPanel({ open, onOpenChange }: CharacterPromptPane
                 </div>
 
                 {/* Character Cards - Grouped by Folders */}
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    modifiers={[restrictToVerticalAxis]}
+                >
                 <ScrollArea className="flex-1 min-h-0">
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
-                        modifiers={[restrictToVerticalAxis]}
-                    >
-                        <SortableContext
-                            items={characters.map(c => c.id)}
-                            strategy={verticalListSortingStrategy}
-                        >
                             <div className="flex flex-col gap-2 p-3">
                                 {characters.length === 0 ? (
                                     <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm py-12">
@@ -448,6 +452,10 @@ export function CharacterPromptPanel({ open, onOpenChange }: CharacterPromptPane
 
                                                 {/* Folder Contents */}
                                                 {!group.collapsed && (
+                                                    <SortableContext
+                                                        items={chars.map(c => c.id)}
+                                                        strategy={verticalListSortingStrategy}
+                                                    >
                                                     <div className={cn("pl-5 border-l-2 ml-2 space-y-1.5 min-h-[32px] pb-2", folderColor.border)}>
                                                         {chars.map((char) => {
                                                             const index = characters.findIndex(c => c.id === char.id)
@@ -470,12 +478,17 @@ export function CharacterPromptPanel({ open, onOpenChange }: CharacterPromptPane
                                                             )
                                                         })}
                                                     </div>
+                                                    </SortableContext>
                                                 )}
                                             </DroppableFolder>
                                         )})}   
 
                                         {/* Ungrouped Characters */}
                                         <DroppableUngrouped isActive={activeId !== null} hasGroups={groups.length > 0}>
+                                            <SortableContext
+                                                items={ungroupedCharacters.map(c => c.id)}
+                                                strategy={verticalListSortingStrategy}
+                                            >
                                             {ungroupedCharacters.length > 0 && (
                                                 <div className="space-y-1.5">
                                                     {groups.length > 0 && (
@@ -516,6 +529,7 @@ export function CharacterPromptPanel({ open, onOpenChange }: CharacterPromptPane
                                                     <span className="text-xs opacity-50">(0)</span>
                                                 </div>
                                             )}
+                                            </SortableContext>
                                         </DroppableUngrouped>
 
                                 {/* No Results */}
@@ -530,9 +544,8 @@ export function CharacterPromptPanel({ open, onOpenChange }: CharacterPromptPane
                             </>
                         )}
                     </div>
-                    </SortableContext>
-                </DndContext>
                 </ScrollArea>
+                </DndContext>
             </div>
 
             {/* Position Dialog */}
@@ -618,12 +631,18 @@ function SortableCharacterCard(props: CharacterCardProps) {
     const style: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
-        zIndex: isDragging ? 100 : 'auto',
+        zIndex: isDragging ? 9999 : 'auto',
+        position: isDragging ? 'relative' : undefined,
+        opacity: isDragging ? 0.9 : 1,
+        boxShadow: isDragging ? '0 10px 40px rgba(0,0,0,0.3)' : undefined,
     }
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes}>
+        <div 
+            ref={setNodeRef} 
+            style={style}
+            {...attributes}
+        >
             <CharacterCard {...props} dragHandleProps={listeners} />
         </div>
     )

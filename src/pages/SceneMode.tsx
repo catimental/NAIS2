@@ -419,13 +419,13 @@ export default function SceneMode() {
 
                         {/* Move to Preset */}
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Tip content={t('scene.moveToPreset', '프리셋으로 이동')}>
+                            <Tip content={t('scene.moveToPreset', '프리셋으로 이동')}>
+                                <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="icon" className="h-9 w-9" disabled={selectedSceneIds.length === 0 || presets.length < 2}>
                                         <FolderInput className="h-4 w-4" />
                                     </Button>
-                                </Tip>
-                            </DropdownMenuTrigger>
+                                </DropdownMenuTrigger>
+                            </Tip>
                             <DropdownMenuContent>
                                 {presets.filter(p => p.id !== activePresetId).map(p => (
                                     <DropdownMenuItem key={p.id} onClick={() => moveSelectedScenesToPreset(p.id)}>
