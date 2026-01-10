@@ -726,10 +726,14 @@ export function HistoryPanel() {
                 smea_dyn: metadata.smeaDyn ?? false,
                 variety: metadata.variety ?? false,
                 seed: newSeed,
+                imageFormat: useSettingsStore.getState().imageFormat,
             })
 
             if (result.success && result.imageData) {
-                setPreviewImage(`data:image/png;base64,${result.imageData}`)
+                const { imageFormat } = useSettingsStore.getState()
+                const mimeType = imageFormat === 'webp' ? 'image/webp' : 'image/png'
+                const fileExt = imageFormat === 'webp' ? 'webp' : 'png'
+                setPreviewImage(`data:${mimeType};base64,${result.imageData}`)
 
                 // Save to disk if autoSave is enabled
                 const { autoSave, useAbsolutePath } = useSettingsStore.getState()
@@ -741,7 +745,7 @@ export function HistoryPanel() {
                             bytes[j] = binaryString.charCodeAt(j)
                         }
 
-                        const fileName = `NAIS_${Date.now()}.png`
+                        const fileName = `NAIS_${Date.now()}.${fileExt}`
                         const outputDir = savePath || 'NAIS_Output'
 
                         let fullPath: string
@@ -768,7 +772,7 @@ export function HistoryPanel() {
                         // Dispatch event for instant history update
                         try {
                             window.dispatchEvent(new CustomEvent('newImageGenerated', {
-                                detail: { path: fullPath, data: `data:image/png;base64,${result.imageData}` }
+                                detail: { path: fullPath, data: `data:${mimeType};base64,${result.imageData}` }
                             }))
                         } catch (e) {
                             console.warn('Failed to dispatch newImageGenerated event:', e)
@@ -778,12 +782,12 @@ export function HistoryPanel() {
                     }
                 } else {
                     // Auto-save OFF (Regenerate): Dispatch memory-only event
-                    const fileName = `NAIS_${Date.now()}.png`
+                    const fileName = `NAIS_${Date.now()}.${fileExt}`
                     const memoryPath = `memory://${fileName}`
 
                     try {
                         window.dispatchEvent(new CustomEvent('newImageGenerated', {
-                            detail: { path: memoryPath, data: `data:image/png;base64,${result.imageData}` }
+                            detail: { path: memoryPath, data: `data:${mimeType};base64,${result.imageData}` }
                         }))
                     } catch (e) {
                         console.warn('Failed to dispatch newImageGenerated event (Memory):', e)

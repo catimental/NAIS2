@@ -190,16 +190,20 @@ export function useSceneGeneration() {
                     preEncodedVibes: vibeImages.map(img => img.encodedVibe || null),
 
                     // Character Prompts - already processed with fragment substitution
-                    characterPrompts: processedCharacterPrompts
+                    characterPrompts: processedCharacterPrompts,
+
+                    // Image format from settings
+                    imageFormat: useSettingsStore.getState().imageFormat,
                 }
 
                 let result
 
+                const streamMimeType = params.imageFormat === 'webp' ? 'image/webp' : 'image/png'
                 if (streamingView) {
                     // Streaming Generation - real-time preview updates
                     result = await generateImageStream(token, params, (progress, image) => {
                         if (image) {
-                            setStreamingData(scene.id, `data:image/png;base64,${image}`, progress / 100)
+                            setStreamingData(scene.id, `data:${streamMimeType};base64,${image}`, progress / 100)
                         } else {
                             // Progress-only update
                             setStreamingData(scene.id, null, progress / 100)
@@ -220,10 +224,13 @@ export function useSceneGeneration() {
                     const safePresetName = (currentPreset?.name || 'Default').replace(/[<>:"/\\|?*]/g, '_').trim()
                     // Sanitize scene name for folder name
                     const safeSceneName = scene.name.replace(/[<>:"/\\|?*]/g, '_').trim() || 'Untitled_Scene'
-                    const fileName = `NAIS_SCENE_${Date.now()}.png`
+                    const { imageFormat } = useSettingsStore.getState()
+                    const fileExt = imageFormat === 'webp' ? 'webp' : 'png'
+                    const mimeType = imageFormat === 'webp' ? 'image/webp' : 'image/png'
+                    const fileName = `NAIS_SCENE_${Date.now()}.${fileExt}`
 
                     try {
-                        const base64Data = result.imageData.replace(/^data:image\/png;base64,/, '')
+                        const base64Data = result.imageData.replace(/^data:image\/(png|webp);base64,/, '')
                         const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))
 
                         const { useAbsolutePath } = useSettingsStore.getState()
@@ -272,7 +279,7 @@ export function useSceneGeneration() {
 
                         // Notify HistoryPanel immediately with image data
                         window.dispatchEvent(new CustomEvent('newImageGenerated', {
-                            detail: { path: fullPath, data: `data:image/png;base64,${result.imageData}` }
+                            detail: { path: fullPath, data: `data:${mimeType};base64,${result.imageData}` }
                         }))
 
                         addImageToScene(activePresetId, scene.id, fullPath)

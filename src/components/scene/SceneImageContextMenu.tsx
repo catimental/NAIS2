@@ -14,6 +14,7 @@ import { Command } from '@tauri-apps/plugin-shell'
 import { useNavigate } from 'react-router-dom'
 import { useToolsStore } from '@/stores/tools-store'
 import { useGenerationStore } from '@/stores/generation-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { SceneImage } from '@/stores/scene-store'
 
 interface SceneContextMenuProps {
@@ -69,8 +70,10 @@ export function SceneImageContextMenu({ image, children, onDelete, onAddRef, onL
                 data = new Uint8Array(buffer)
             }
 
+            const { imageFormat } = useSettingsStore.getState()
+            const fileExt = imageFormat === 'webp' ? 'webp' : 'png'
             const filePath = await save({
-                defaultPath: `NAIS_${image.timestamp}.png`,
+                defaultPath: `NAIS_${image.timestamp}.${fileExt}`,
                 filters: [{ name: 'Image', extensions: ['png', 'jpg', 'webp'] }],
             })
             if (filePath) {

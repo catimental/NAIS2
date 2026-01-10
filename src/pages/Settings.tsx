@@ -70,7 +70,7 @@ export default function Settings() {
     const { t, i18n } = useTranslation()
     const { theme, setTheme } = useThemeStore()
     const { token, isVerified, anlas, isLoading, verifyAndSave } = useAuthStore()
-    const { savePath, autoSave, setSavePath, setAutoSave, promptFontSize, setPromptFontSize, useStreaming, setUseStreaming, generationDelay, setGenerationDelay, geminiApiKey, setGeminiApiKey, useAbsolutePath, libraryPath, useAbsoluteLibraryPath, setLibraryPath } = useSettingsStore()
+    const { savePath, autoSave, setSavePath, setAutoSave, promptFontSize, setPromptFontSize, useStreaming, setUseStreaming, generationDelay, setGenerationDelay, geminiApiKey, setGeminiApiKey, useAbsolutePath, libraryPath, useAbsoluteLibraryPath, setLibraryPath, imageFormat, setImageFormat } = useSettingsStore()
     const { bindings, enabled: shortcutsEnabled, setBinding, resetBinding, resetAllBindings, setEnabled: setShortcutsEnabled } = useShortcutStore()
     const [localGeminiKey, setLocalGeminiKey] = useState(geminiApiKey)
 
@@ -721,6 +721,30 @@ export default function Settings() {
                                         )}
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Image Format Setting */}
+                            <div className="border border-border/50 rounded-xl p-6 space-y-4 bg-card/30">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <label className="text-sm font-medium">{t('settingsPage.save.imageFormat.title', 'Image Format')}</label>
+                                        <p className="text-xs text-muted-foreground">
+                                            {t('settingsPage.save.imageFormat.description', 'Choose the format for generated images.')}
+                                        </p>
+                                    </div>
+                                    <Select value={imageFormat} onValueChange={(value: 'png' | 'webp') => setImageFormat(value)}>
+                                        <SelectTrigger className="w-32">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="png">PNG</SelectItem>
+                                            <SelectItem value="webp">WebP</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {t('settingsPage.save.imageFormat.help', 'WebP offers smaller file sizes with similar quality. PNG provides lossless quality.')}
+                                </p>
                             </div>
                         </section>
                     )}

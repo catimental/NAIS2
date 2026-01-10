@@ -32,6 +32,9 @@ interface SettingsState {
     libraryPath: string
     useAbsoluteLibraryPath: boolean
 
+    // Image format setting
+    imageFormat: 'png' | 'webp'
+
     // Actions
     setSavePath: (path: string, useAbsolute?: boolean) => void
     setAutoSave: (autoSave: boolean) => void
@@ -43,6 +46,7 @@ interface SettingsState {
     setGenerationDelay: (delay: number) => void
     setGeminiApiKey: (key: string) => void
     setLibraryPath: (path: string, useAbsolute?: boolean) => void
+    setImageFormat: (format: 'png' | 'webp') => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -59,6 +63,7 @@ export const useSettingsStore = create<SettingsState>()(
             geminiApiKey: '', // Default: empty
             libraryPath: 'NAIS_Library', // Default: relative to Pictures folder
             useAbsoluteLibraryPath: false, // Default: relative to Pictures folder
+            imageFormat: 'png', // Default: PNG format
 
             setSavePath: (savePath, useAbsolute) => set({
                 savePath,
@@ -85,6 +90,7 @@ export const useSettingsStore = create<SettingsState>()(
                 libraryPath,
                 useAbsoluteLibraryPath: useAbsolute ?? false
             }),
+            setImageFormat: (format) => set({ imageFormat: format }),
         }),
         {
             name: 'nais2-settings',

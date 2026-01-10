@@ -123,11 +123,15 @@ export default function MainMode() {
                 smea_dyn: metadata.smeaDyn ?? false,
                 variety: metadata.variety ?? false,
                 seed: newSeed,
+                imageFormat: useSettingsStore.getState().imageFormat,
             })
 
             if (result.success && result.imageData) {
                 // Update preview with new image
-                genStore.setPreviewImage(`data:image/png;base64,${result.imageData}`)
+                const { imageFormat } = useSettingsStore.getState()
+                const mimeType = imageFormat === 'webp' ? 'image/webp' : 'image/png'
+                const fileExt = imageFormat === 'webp' ? 'webp' : 'png'
+                genStore.setPreviewImage(`data:${mimeType};base64,${result.imageData}`)
 
                 // Save to disk if autoSave is enabled
                 const { savePath, autoSave, useAbsolutePath } = useSettingsStore.getState()
@@ -139,7 +143,7 @@ export default function MainMode() {
                             bytes[j] = binaryString.charCodeAt(j)
                         }
 
-                        const fileName = `NAIS_${Date.now()}.png`
+                        const fileName = `NAIS_${Date.now()}.${fileExt}`
                         const outputDir = savePath || 'NAIS_Output'
 
                         let fullPath: string
@@ -166,7 +170,7 @@ export default function MainMode() {
                         // Dispatch event for instant history update
                         try {
                             window.dispatchEvent(new CustomEvent('newImageGenerated', {
-                                detail: { path: fullPath, data: `data:image/png;base64,${result.imageData}` }
+                                detail: { path: fullPath, data: `data:${mimeType};base64,${result.imageData}` }
                             }))
                         } catch (e) {
                             console.warn('Failed to dispatch newImageGenerated event:', e)
@@ -213,9 +217,12 @@ export default function MainMode() {
     const handleSaveAs = async () => {
         if (!previewImage) return
         try {
+            const { imageFormat } = useSettingsStore.getState()
+            const fileExt = imageFormat === 'webp' ? 'webp' : 'png'
+            const filterName = imageFormat === 'webp' ? 'WebP Image' : 'PNG Image'
             const filePath = await save({
-                defaultPath: `NAIS_${Date.now()}.png`,
-                filters: [{ name: 'PNG Image', extensions: ['png'] }],
+                defaultPath: `NAIS_${Date.now()}.${fileExt}`,
+                filters: [{ name: filterName, extensions: [fileExt] }],
             })
 
             if (filePath) {

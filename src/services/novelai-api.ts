@@ -71,6 +71,9 @@ export interface GenerationParams {
     // Inpainting Parameters
     mask?: string           // Base64 encoded mask (white = inpaint area)
 
+    // Image format
+    imageFormat?: 'png' | 'webp'  // Output image format
+
     // NAI UI options
     qualityToggle?: boolean // Add Quality Tags
     ucPreset?: number       // Undesired Content Preset (0=Heavy, 1=Light, 2=Furry, 3=Human, 4=None)
@@ -812,7 +815,7 @@ export async function generateImageStream(
             normalize_reference_strength_multiple: true,
             inpaintImg2ImgStrength: 1,
             deliberate_euler_ancestral_bug: false,
-            image_format: 'png',
+            image_format: params.imageFormat ?? 'png',
 
             // Reference/Vibe Transfer
             reference_image_multiple: processedVibeImages,

@@ -372,8 +372,8 @@ export const useGenerationStore = create<GenerationState>()(
                             })
                         )
 
-                        // Check if streaming is enabled
-                        const { useStreaming } = useSettingsStore.getState()
+                        // Check if streaming is enabled and get image format
+                        const { useStreaming, imageFormat } = useSettingsStore.getState()
 
                         // Helper function to round to nearest multiple of 64 (NovelAI requirement)
                         const roundTo64 = (value: number): number => Math.round(value / 64) * 64
@@ -436,6 +436,9 @@ export const useGenerationStore = create<GenerationState>()(
                             // Character Prompts (V4 char_captions with positions)
                             characterPrompts: processedCharacterPrompts,
                             characterPositionEnabled: positionEnabled,
+
+                            // Image format (PNG or WebP)
+                            imageFormat,
                         }
 
                         // Reset progress
@@ -446,12 +449,13 @@ export const useGenerationStore = create<GenerationState>()(
                         const canUseStreaming = useStreaming
 
                         let result
+                        const streamMimeType = imageFormat === 'webp' ? 'image/webp' : 'image/png'
                         if (canUseStreaming) {
                             console.log('[Generate] Using streaming API...')
                             result = await generateImageStream(token, generationParams, (progress, partialImage) => {
                                 // Update preview image directly (no null clearing - causes flicker)
                                 if (partialImage) {
-                                    set({ streamProgress: progress, previewImage: `data:image/png;base64,${partialImage}` })
+                                    set({ streamProgress: progress, previewImage: `data:${streamMimeType};base64,${partialImage}` })
                                 } else {
                                     set({ streamProgress: progress })
                                 }
@@ -471,7 +475,8 @@ export const useGenerationStore = create<GenerationState>()(
                         set({ lastGenerationTime: generationTime })
 
                         if (result.success && result.imageData) {
-                            const imageUrl = `data:image/png;base64,${result.imageData}`
+                            const mimeType = imageFormat === 'webp' ? 'image/webp' : 'image/png'
+                            const imageUrl = `data:${mimeType};base64,${result.imageData}`
                             set({ previewImage: imageUrl })
 
                             // Cache newly encoded vibes back to character store for reuse
@@ -516,7 +521,8 @@ export const useGenerationStore = create<GenerationState>()(
                                     } else if (sourceImage) {
                                         typePrefix = 'I2I_'
                                     }
-                                    const fileName = `NAIS_${typePrefix}${Date.now()}.png`
+                                    const fileExt = imageFormat === 'webp' ? 'webp' : 'png'
+                                    const fileName = `NAIS_${typePrefix}${Date.now()}.${fileExt}`
                                     const outputDir = savePath || 'NAIS_Output'
 
                                     let fullPath: string
@@ -552,7 +558,8 @@ export const useGenerationStore = create<GenerationState>()(
                                     console.warn('Tauri FS save failed, using download fallback:', e)
                                     const link = document.createElement('a')
                                     link.href = imageUrl
-                                    link.download = `NAIS_${Date.now()}.png`
+                                    const fallbackExt = imageFormat === 'webp' ? 'webp' : 'png'
+                                    link.download = `NAIS_${Date.now()}.${fallbackExt}`
                                     document.body.appendChild(link)
                                     link.click()
                                     document.body.removeChild(link)
@@ -561,7 +568,8 @@ export const useGenerationStore = create<GenerationState>()(
                                 // Auto-save is OFF: Still notify HistoryPanel with memory-based path
                                 // This allows viewing the generated image in history without saving to disk
                                 try {
-                                    const memoryPath = `memory://NAIS_${Date.now()}.png`
+                                    const memExt = imageFormat === 'webp' ? 'webp' : 'png'
+                                    const memoryPath = `memory://NAIS_${Date.now()}.${memExt}`
                                     window.dispatchEvent(new CustomEvent('newImageGenerated', {
                                         detail: { path: memoryPath, data: imageUrl }
                                     }))

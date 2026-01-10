@@ -465,7 +465,12 @@
             "resetDefault": "Reset to Default",
             "customPath": "Custom Path",
             "autoSave": "Auto Save",
-            "autoSaveHelp": "Automatically save images when generated."
+            "autoSaveHelp": "Automatically save images when generated.",
+            "imageFormat": {
+                "title": "Image Format",
+                "description": "Choose the format for generated images.",
+                "help": "WebP offers smaller file sizes with similar quality. PNG provides lossless quality."
+            }
         },
         "library": {
             "folder": "Library Folder",

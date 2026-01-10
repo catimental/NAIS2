@@ -465,7 +465,12 @@
             "resetDefault": "デフォルトに戻す",
             "customPath": "カスタムパス",
             "autoSave": "自動保存",
-            "autoSaveHelp": "画像生成時に自動的に保存します。"
+            "autoSaveHelp": "画像生成時に自動的に保存します。",
+            "imageFormat": {
+                "title": "画像フォーマット",
+                "description": "生成された画像の保存形式を選択します。",
+                "help": "WebPは同等の品質でより小さいファイルサイズを提供します。PNGはロスレス品質を提供します。"
+            }
         },
         "library": {
             "folder": "ライブラリフォルダ",
