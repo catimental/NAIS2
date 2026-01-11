@@ -529,7 +529,8 @@ export const useSceneStore = create<SceneState>()(
                             if (slots.length === 0) return [""]
 
                             const firstSlot = slots[0] || []
-                            const enabledItems = firstSlot.filter((item: any) => item.enabled)
+                            // enabled 필드가 없으면 기본적으로 활성화된 것으로 간주
+                            const enabledItems = firstSlot.filter((item: any) => item.enabled !== false)
                             const remainingPrompts = generatePrompts(slots.slice(1))
 
                             if (enabledItems.length === 0) return remainingPrompts
