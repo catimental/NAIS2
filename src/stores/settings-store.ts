@@ -19,6 +19,9 @@ interface SettingsState {
 
     // UI settings
     promptFontSize: number
+    basePromptCollapsed: boolean  // 기본 프롬프트 접기 상태
+    additionalPromptCollapsed: boolean  // 추가 프롬프트 접기 상태
+    detailPromptCollapsed: boolean  // 세부 프롬프트 접기 상태
     negativePromptCollapsed: boolean  // 네거티브 프롬프트 접기 상태
 
     // Generation settings
@@ -41,6 +44,9 @@ interface SettingsState {
     addCustomResolution: (resolution: Omit<CustomResolution, 'id'>) => void
     removeCustomResolution: (id: string) => void
     setPromptFontSize: (size: number) => void
+    setBasePromptCollapsed: (collapsed: boolean) => void
+    setAdditionalPromptCollapsed: (collapsed: boolean) => void
+    setDetailPromptCollapsed: (collapsed: boolean) => void
     setNegativePromptCollapsed: (collapsed: boolean) => void
     setUseStreaming: (useStreaming: boolean) => void
     setGenerationDelay: (delay: number) => void
@@ -57,6 +63,9 @@ export const useSettingsStore = create<SettingsState>()(
             autoSave: true,
             customResolutions: [],
             promptFontSize: 16, // Default text-base equivalent approximately
+            basePromptCollapsed: false, // Default: expanded
+            additionalPromptCollapsed: false, // Default: expanded
+            detailPromptCollapsed: false, // Default: expanded
             negativePromptCollapsed: false, // Default: expanded
             useStreaming: true, // Default: enabled
             generationDelay: 500, // Default: 500ms delay between batch generations
@@ -82,6 +91,9 @@ export const useSettingsStore = create<SettingsState>()(
                 customResolutions: state.customResolutions.filter(r => r.id !== id)
             })),
             setPromptFontSize: (size) => set({ promptFontSize: size }),
+            setBasePromptCollapsed: (collapsed) => set({ basePromptCollapsed: collapsed }),
+            setAdditionalPromptCollapsed: (collapsed) => set({ additionalPromptCollapsed: collapsed }),
+            setDetailPromptCollapsed: (collapsed) => set({ detailPromptCollapsed: collapsed }),
             setNegativePromptCollapsed: (collapsed) => set({ negativePromptCollapsed: collapsed }),
             setUseStreaming: (useStreaming) => set({ useStreaming }),
             setGenerationDelay: (delay) => set({ generationDelay: Math.max(0, Math.min(5000, delay)) }),

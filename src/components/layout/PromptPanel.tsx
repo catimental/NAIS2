@@ -128,6 +128,12 @@ export function PromptPanel() {
 
     // Zustand 선택적 구독 - settingsStore
     const promptFontSize = useSettingsStore(state => state.promptFontSize)
+    const basePromptCollapsed = useSettingsStore(state => state.basePromptCollapsed)
+    const setBasePromptCollapsed = useSettingsStore(state => state.setBasePromptCollapsed)
+    const additionalPromptCollapsed = useSettingsStore(state => state.additionalPromptCollapsed)
+    const setAdditionalPromptCollapsed = useSettingsStore(state => state.setAdditionalPromptCollapsed)
+    const detailPromptCollapsed = useSettingsStore(state => state.detailPromptCollapsed)
+    const setDetailPromptCollapsed = useSettingsStore(state => state.setDetailPromptCollapsed)
     const negativePromptCollapsed = useSettingsStore(state => state.negativePromptCollapsed)
     const setNegativePromptCollapsed = useSettingsStore(state => state.setNegativePromptCollapsed)
 
@@ -205,40 +211,103 @@ export function PromptPanel() {
                     onOpenChange={setCharacterPanelOpen}
                 />
 
-                {/* Base Prompt - 30% (expands when negative collapsed) */}
-                <div className={cn("flex flex-col min-h-0 basis-[30%]", negativePromptCollapsed && "flex-1")}>
-                    <label className="text-xs font-medium text-muted-foreground mb-1">{t('prompt.base')}</label>
-                    <AutocompleteTextarea
-                        placeholder={t('prompt.basePlaceholder')}
-                        value={basePrompt}
-                        onChange={(e) => setBasePrompt(e.target.value)}
-                        className="flex-1 min-h-0 resize-none rounded-xl"
-                        style={{ fontSize: `${promptFontSize}px` }}
-                    />
+                {/* Base Prompt - Collapsible */}
+                <div className={cn(
+                    "flex flex-col transition-all duration-200 overflow-hidden",
+                    basePromptCollapsed ? "flex-none h-[28px]" : "min-h-0 basis-[30%] flex-1"
+                )}>
+                    <button
+                        type="button"
+                        onClick={() => setBasePromptCollapsed(!basePromptCollapsed)}
+                        className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1 hover:text-foreground cursor-pointer flex-shrink-0"
+                    >
+                        {basePromptCollapsed ? (
+                            <ChevronDown className="h-3 w-3" />
+                        ) : (
+                            <ChevronUp className="h-3 w-3" />
+                        )}
+                        {t('prompt.base')}
+                        {basePromptCollapsed && basePrompt && (
+                            <span className="text-muted-foreground font-normal truncate max-w-[200px]">
+                                - {basePrompt.split(',')[0]}...
+                            </span>
+                        )}
+                    </button>
+                    {!basePromptCollapsed && (
+                        <AutocompleteTextarea
+                            placeholder={t('prompt.basePlaceholder')}
+                            value={basePrompt}
+                            onChange={(e) => setBasePrompt(e.target.value)}
+                            className="flex-1 min-h-0 resize-none rounded-xl"
+                            style={{ fontSize: `${promptFontSize}px` }}
+                        />
+                    )}
                 </div>
 
-                {/* Additional Prompt - 25% (expands when negative collapsed) */}
-                <div className={cn("flex flex-col min-h-0 basis-[25%]", negativePromptCollapsed && "flex-1")}>
-                    <label className="text-xs font-medium text-muted-foreground mb-1">{t('prompt.additional')}</label>
-                    <AutocompleteTextarea
-                        placeholder={t('prompt.additionalPlaceholder')}
-                        value={additionalPrompt}
-                        onChange={(e) => setAdditionalPrompt(e.target.value)}
-                        className="flex-1 min-h-0 resize-none rounded-xl"
-                        style={{ fontSize: `${promptFontSize}px` }}
-                    />
+                {/* Additional Prompt - Collapsible */}
+                <div className={cn(
+                    "flex flex-col transition-all duration-200 overflow-hidden",
+                    additionalPromptCollapsed ? "flex-none h-[28px]" : "min-h-0 basis-[25%] flex-1"
+                )}>
+                    <button
+                        type="button"
+                        onClick={() => setAdditionalPromptCollapsed(!additionalPromptCollapsed)}
+                        className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1 hover:text-foreground cursor-pointer flex-shrink-0"
+                    >
+                        {additionalPromptCollapsed ? (
+                            <ChevronDown className="h-3 w-3" />
+                        ) : (
+                            <ChevronUp className="h-3 w-3" />
+                        )}
+                        {t('prompt.additional')}
+                        {additionalPromptCollapsed && additionalPrompt && (
+                            <span className="text-muted-foreground font-normal truncate max-w-[200px]">
+                                - {additionalPrompt.split(',')[0]}...
+                            </span>
+                        )}
+                    </button>
+                    {!additionalPromptCollapsed && (
+                        <AutocompleteTextarea
+                            placeholder={t('prompt.additionalPlaceholder')}
+                            value={additionalPrompt}
+                            onChange={(e) => setAdditionalPrompt(e.target.value)}
+                            className="flex-1 min-h-0 resize-none rounded-xl"
+                            style={{ fontSize: `${promptFontSize}px` }}
+                        />
+                    )}
                 </div>
 
-                {/* Detail Prompt - 25% (expands when negative collapsed) */}
-                <div className={cn("flex flex-col min-h-0 basis-[25%]", negativePromptCollapsed && "flex-1")}>
-                    <label className="text-xs font-medium text-muted-foreground mb-1">{t('prompt.detail')}</label>
-                    <AutocompleteTextarea
-                        placeholder={t('prompt.detailPlaceholder')}
-                        value={detailPrompt}
-                        onChange={(e) => setDetailPrompt(e.target.value)}
-                        className="flex-1 min-h-0 resize-none rounded-xl"
-                        style={{ fontSize: `${promptFontSize}px` }}
-                    />
+                {/* Detail Prompt - Collapsible */}
+                <div className={cn(
+                    "flex flex-col transition-all duration-200 overflow-hidden",
+                    detailPromptCollapsed ? "flex-none h-[28px]" : "min-h-0 basis-[25%] flex-1"
+                )}>
+                    <button
+                        type="button"
+                        onClick={() => setDetailPromptCollapsed(!detailPromptCollapsed)}
+                        className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1 hover:text-foreground cursor-pointer flex-shrink-0"
+                    >
+                        {detailPromptCollapsed ? (
+                            <ChevronDown className="h-3 w-3" />
+                        ) : (
+                            <ChevronUp className="h-3 w-3" />
+                        )}
+                        {t('prompt.detail')}
+                        {detailPromptCollapsed && detailPrompt && (
+                            <span className="text-muted-foreground font-normal truncate max-w-[200px]">
+                                - {detailPrompt.split(',')[0]}...
+                            </span>
+                        )}
+                    </button>
+                    {!detailPromptCollapsed && (
+                        <AutocompleteTextarea
+                            placeholder={t('prompt.detailPlaceholder')}
+                            value={detailPrompt}
+                            onChange={(e) => setDetailPrompt(e.target.value)}
+                            className="flex-1 min-h-0 resize-none rounded-xl"
+                            style={{ fontSize: `${promptFontSize}px` }}
+                        />
+                    )}
                 </div>
 
                 {/* Negative Prompt - 20% (collapsible, collapses downward) */}

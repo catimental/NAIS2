@@ -14,7 +14,9 @@ import {
     X,
     Pencil,
     Star,
-    Trash2
+    Trash2,
+    CheckSquare,
+    Square
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { AutocompleteTextarea } from "@/components/ui/AutocompleteTextarea";
@@ -85,27 +87,37 @@ export default function SceneDetail() {
     const [isEditingName, setIsEditingName] = useState(false)
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
     const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null)
+    const [viewerImage, setViewerImage] = useState<SceneImage | null>(null)  // Current image object for context menu
     const streamingSceneId = useSceneStore(s => s.streamingSceneId)
     const streamingImage = useSceneStore(s => s.streamingSceneId === sceneId ? s.streamingImage : null)
     const streamingProgress = useSceneStore(s => s.streamingSceneId === sceneId ? s.streamingProgress : 0)
     const thumbnailLayout = useSceneStore(s => s.thumbnailLayout)
 
+    // Edit mode state
+    const [isEditMode, setIsEditMode] = useState(false)
+    const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set())
+
     // Auto-save prompt logic - hooks must be before conditional return
     const updateScenePrompt = useSceneStore(state => state.updateScenePrompt)
     const [localPrompt, setLocalPrompt] = useState(scene?.scenePrompt || '')
 
-    // ESC key handler for closing viewer
+    const nav = useNavigate()
+
+    // ESC key handler for closing viewer or navigating back
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && viewerImageSrc) {
-                setViewerImageSrc(null)
+            if (e.key === 'Escape') {
+                if (viewerImageSrc) {
+                    setViewerImageSrc(null)
+                } else {
+                    // Navigate back to scene list
+                    nav('/scenes')
+                }
             }
         }
         window.addEventListener('keydown', handleEsc)
         return () => window.removeEventListener('keydown', handleEsc)
-    }, [viewerImageSrc])
-
-    const nav = useNavigate()
+    }, [viewerImageSrc, nav])
 
     useEffect(() => {
         if (scene) {
@@ -387,42 +399,121 @@ export default function SceneDetail() {
                     <CardTitle className="text-sm flex items-center gap-2">
                         {t('scene.generatedImages')}
                         <span className="text-muted-foreground font-normal">({scene.images.length})</span>
+                        {isEditMode && selectedImageIds.size > 0 && (
+                            <span className="text-primary font-medium ml-2">
+                                {t('scene.selectedCount', '{{count}}개 선택됨', { count: selectedImageIds.size })}
+                            </span>
+                        )}
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 rounded-lg gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={async () => {
-                                if (activePresetId && sceneId) {
-                                    const { count, paths } = deleteNonFavoriteImages(activePresetId, sceneId)
-                                    // Delete actual files
-                                    for (const filePath of paths) {
-                                        try {
-                                            await remove(filePath)
-                                        } catch (e) {
-                                            console.warn('Failed to delete file:', filePath, e)
+                        {isEditMode ? (
+                            <>
+                                {/* Select All / Deselect All */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 rounded-lg gap-1"
+                                    onClick={() => {
+                                        if (selectedImageIds.size === scene.images.length) {
+                                            setSelectedImageIds(new Set())
+                                        } else {
+                                            setSelectedImageIds(new Set(scene.images.map(img => img.id)))
                                         }
-                                    }
-                                    if (count > 0) {
-                                        toast({ description: t('scene.deletedNonFavorites', '{{count}}개 이미지 삭제됨', { count }) })
-                                    }
-                                }
-                            }}
-                            disabled={scene.images.filter(img => !img.isFavorite).length === 0}
-                        >
-                            <Trash2 className="h-3 w-3" />
-                            {t('scene.deleteNonFavorites', '즐겨찾기 제외 삭제')}
-                        </Button>
-                        <Button
-                            variant={showFavoritesOnly ? "default" : "outline"}
-                            size="sm"
-                            className="h-7 rounded-lg gap-1"
-                            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                        >
-                            <Star className={`h-3 w-3 ${showFavoritesOnly ? 'fill-current' : ''}`} />
-                            {t('scene.favoritesOnly', '즐겨찾기')}
-                        </Button>
+                                    }}
+                                >
+                                    {selectedImageIds.size === scene.images.length ? (
+                                        <Square className="h-3 w-3" />
+                                    ) : (
+                                        <CheckSquare className="h-3 w-3" />
+                                    )}
+                                    {selectedImageIds.size === scene.images.length ? t('scene.deselectAll', '선택 해제') : t('scene.selectAll', '전체 선택')}
+                                </Button>
+                                {/* Delete Selected */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 rounded-lg gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={async () => {
+                                        if (activePresetId && sceneId && selectedImageIds.size > 0) {
+                                            for (const imgId of selectedImageIds) {
+                                                const img = scene.images.find(i => i.id === imgId)
+                                                if (img && !img.url.startsWith('data:')) {
+                                                    try { await remove(img.url) } catch (e) { console.warn('Delete failed:', e) }
+                                                }
+                                                deleteImage(activePresetId, scene.id, imgId)
+                                            }
+                                            toast({ description: t('scene.deletedSelected', '{{count}}개 이미지 삭제됨', { count: selectedImageIds.size }) })
+                                            setSelectedImageIds(new Set())
+                                        }
+                                    }}
+                                    disabled={selectedImageIds.size === 0}
+                                >
+                                    <Trash2 className="h-3 w-3" />
+                                    {t('scene.deleteSelected', '선택 삭제')}
+                                </Button>
+                                {/* Exit Edit Mode */}
+                                <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="h-7 rounded-lg gap-1"
+                                    onClick={() => {
+                                        setIsEditMode(false)
+                                        setSelectedImageIds(new Set())
+                                    }}
+                                >
+                                    <Check className="h-3 w-3" />
+                                    {t('scene.exitEditMode', '편집 종료')}
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                {/* Edit Mode Button */}
+                                <Tip content={t('scene.editMode', '편집 모드')}>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 rounded-lg gap-1"
+                                        onClick={() => setIsEditMode(true)}
+                                    >
+                                        <Pencil className="h-3 w-3" />
+                                    </Button>
+                                </Tip>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 rounded-lg gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={async () => {
+                                        if (activePresetId && sceneId) {
+                                            const { count, paths } = deleteNonFavoriteImages(activePresetId, sceneId)
+                                            // Delete actual files
+                                            for (const filePath of paths) {
+                                                try {
+                                                    await remove(filePath)
+                                                } catch (e) {
+                                                    console.warn('Failed to delete file:', filePath, e)
+                                                }
+                                            }
+                                            if (count > 0) {
+                                                toast({ description: t('scene.deletedNonFavorites', '{{count}}개 이미지 삭제됨', { count }) })
+                                            }
+                                        }
+                                    }}
+                                    disabled={scene.images.filter(img => !img.isFavorite).length === 0}
+                                >
+                                    <Trash2 className="h-3 w-3" />
+                                    {t('scene.deleteNonFavorites', '즐겨찾기 제외 삭제')}
+                                </Button>
+                                <Button
+                                    variant={showFavoritesOnly ? "default" : "outline"}
+                                    size="sm"
+                                    className="h-7 rounded-lg gap-1"
+                                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                                >
+                                    <Star className={`h-3 w-3 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                                    {t('scene.favoritesOnly', '즐겨찾기')}
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto custom-scrollbar p-4">
@@ -448,6 +539,17 @@ export default function SceneDetail() {
                                     key={image.id}
                                     image={image}
                                     thumbnailLayout={thumbnailLayout}
+                                    isEditMode={isEditMode}
+                                    isSelected={selectedImageIds.has(image.id)}
+                                    onSelect={() => {
+                                        const newSet = new Set(selectedImageIds)
+                                        if (newSet.has(image.id)) {
+                                            newSet.delete(image.id)
+                                        } else {
+                                            newSet.add(image.id)
+                                        }
+                                        setSelectedImageIds(newSet)
+                                    }}
                                     onDelete={() => deleteImage(activePresetId, scene.id, image.id)}
                                     onToggleFavorite={() => toggleFavorite(activePresetId, scene.id, image.id)}
                                     // Handlers for new context menu items
@@ -492,7 +594,10 @@ export default function SceneDetail() {
                                         setSelectedImageForInpaint(base64)
                                         setInpaintDialogOpen(true)
                                     }}
-                                    onImageClick={(imgSrc) => setViewerImageSrc(imgSrc)}
+                                    onImageClick={(imgSrc) => {
+                                        setViewerImageSrc(imgSrc)
+                                        setViewerImage(image)
+                                    }}
                                 />
                             ))}
                         </div>
@@ -524,23 +629,79 @@ export default function SceneDetail() {
                 sourceImage={selectedImageForInpaint}
             />
 
-            {/* Full-Screen Image Viewer Overlay */}
-            {viewerImageSrc && (
+            {/* Full-Screen Image Viewer Overlay with Context Menu */}
+            {viewerImageSrc && viewerImage && (
                 <div
                     className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center cursor-pointer"
-                    onClick={() => setViewerImageSrc(null)}
+                    onClick={() => {
+                        setViewerImageSrc(null)
+                        setViewerImage(null)
+                    }}
                 >
-                    <img
-                        src={viewerImageSrc}
-                        alt="Full view"
-                        className="max-w-[90vw] max-h-[90vh] object-contain"
-                        onClick={(e) => e.stopPropagation()}
-                    />
+                    <SceneImageContextMenu
+                        image={viewerImage}
+                        onDelete={() => {
+                            if (activePresetId && scene) {
+                                deleteImage(activePresetId, scene.id, viewerImage.id)
+                            }
+                            setViewerImageSrc(null)
+                            setViewerImage(null)
+                        }}
+                        onAddRef={async () => {
+                            try {
+                                let dataUrl = viewerImage.url
+                                if (!dataUrl.startsWith('data:')) {
+                                    const data = await readFile(viewerImage.url)
+                                    let binary = ''
+                                    for (let i = 0; i < data.byteLength; i++) {
+                                        binary += String.fromCharCode(data[i])
+                                    }
+                                    dataUrl = `data:image/png;base64,${btoa(binary)}`
+                                }
+                                setSelectedImageForRef(dataUrl)
+                                setImageRefDialogOpen(true)
+                            } catch (e) {
+                                console.error('Failed to load ref image', e)
+                            }
+                        }}
+                        onLoadMetadata={async () => {
+                            try {
+                                let dataUrl = viewerImage.url
+                                if (!dataUrl.startsWith('data:')) {
+                                    const data = await readFile(viewerImage.url)
+                                    let binary = ''
+                                    for (let i = 0; i < data.byteLength; i++) {
+                                        binary += String.fromCharCode(data[i])
+                                    }
+                                    dataUrl = `data:image/png;base64,${btoa(binary)}`
+                                }
+                                setSelectedImageForMetadata(dataUrl)
+                                setMetadataDialogOpen(true)
+                            } catch (e) {
+                                console.error('Failed to load metadata image', e)
+                            }
+                        }}
+                        onInpaint={async (base64) => {
+                            setSelectedImageForInpaint(base64)
+                            setInpaintDialogOpen(true)
+                        }}
+                    >
+                        <img
+                            src={viewerImageSrc}
+                            alt="Full view"
+                            className="max-w-[90vw] max-h-[90vh] object-contain cursor-default"
+                            onClick={(e) => e.stopPropagation()}
+                            onContextMenu={(e) => e.stopPropagation()}
+                        />
+                    </SceneImageContextMenu>
                     <Button
                         variant="ghost"
                         size="icon"
                         className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-lg h-10 w-10"
-                        onClick={() => setViewerImageSrc(null)}
+                        onClick={() => {
+                            setViewerImageSrc(null)
+                            setViewerImage(null)
+                        }}
                     >
                         <X className="h-6 w-6" />
                     </Button>
@@ -555,6 +716,9 @@ import { SceneImageContextMenu } from '@/components/scene/SceneImageContextMenu'
 function SceneImageCard({
     image,
     thumbnailLayout,
+    isEditMode,
+    isSelected,
+    onSelect,
     onToggleFavorite,
     onDelete,
     onAddRef,
@@ -564,6 +728,9 @@ function SceneImageCard({
 }: {
     image: SceneImage
     thumbnailLayout: 'vertical' | 'horizontal'
+    isEditMode?: boolean
+    isSelected?: boolean
+    onSelect?: () => void
     onToggleFavorite: () => void
     onDelete: () => void
     onAddRef?: () => void
@@ -620,11 +787,19 @@ function SceneImageCard({
                 className={cn(
                     "relative group rounded-xl overflow-hidden bg-muted/30 border-2 transition-all duration-300 shadow-sm cursor-pointer",
                     thumbnailLayout === 'vertical' ? "aspect-[2/3]" : "aspect-[3/2]",
-                    image.isFavorite 
-                        ? "border-yellow-500 ring-2 ring-yellow-500/30" 
-                        : "border-border/50 hover:border-primary/50"
+                    isEditMode && isSelected
+                        ? "border-orange-500 ring-2 ring-orange-500/50"
+                        : image.isFavorite
+                            ? "border-yellow-500 ring-2 ring-yellow-500/30"
+                            : "border-border/50 hover:border-primary/50"
                 )}
-                onClick={() => imgSrc && onImageClick?.(imgSrc)}
+                onClick={() => {
+                    if (isEditMode) {
+                        onSelect?.()
+                    } else {
+                        imgSrc && onImageClick?.(imgSrc)
+                    }
+                }}
             >
                 {/* Image */}
                 {imgSrc && (
@@ -636,16 +811,30 @@ function SceneImageCard({
                     />
                 )}
 
-                {/* Overlay */}
-                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-3">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => { e.stopPropagation(); onToggleFavorite() }}
-                    >
-                        <Star className={cn("h-3.5 w-3.5", image.isFavorite && "fill-current")} />
-                    </Button>
-                </div>
+                {/* Edit mode selection overlay */}
+                {isEditMode && (
+                    <div className={cn(
+                        "absolute top-2 left-2 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all",
+                        isSelected
+                            ? "bg-orange-500 border-orange-500"
+                            : "bg-black/50 border-white/50"
+                    )}>
+                        {isSelected && <Check className="h-4 w-4 text-white" />}
+                    </div>
+                )}
+
+                {/* Overlay (hide in edit mode) */}
+                {!isEditMode && (
+                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-3">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); onToggleFavorite() }}
+                        >
+                            <Star className={cn("h-3.5 w-3.5", image.isFavorite && "fill-current")} />
+                        </Button>
+                    </div>
+                )}
 
                 <div className="absolute inset-0 rounded-xl border border-transparent group-hover:border-primary/50 pointer-events-none" />
             </div>

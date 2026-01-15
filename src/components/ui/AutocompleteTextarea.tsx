@@ -259,18 +259,18 @@ export function AutocompleteTextarea({
             const wordStart = wordMatch.index!
             const before = val.slice(0, wordStart)
             const after = val.slice(pos)
-            
+
             // Add space only if not at start and not after special chars
             const lastChar = before.slice(-1)
             const needsSpace = before.length > 0 && ![' ', '\n', ':'].includes(lastChar)
             const prefix = needsSpace ? ' ' : ''
-            
+
             // Always use ", " as suffix (user will close :: manually if needed)
             const suffix = ', '
 
             // Keep after as-is to preserve newlines and formatting
             const newValue = before + prefix + suggestion.value + suffix + after
-            
+
             // Calculate new cursor position
             const newCursorPos = wordStart + prefix.length + suggestion.value.length + suffix.length
 
@@ -414,25 +414,50 @@ export function AutocompleteTextarea({
     // --- Highlighting ---
     const renderHighlights = (text: string) => {
         if (!text) return null
-        // Syntax regex: 
-        // 1. Weights: 1.2::tag:: OR -0.5::tag::
-        // 2. Fragments: <fragment>
-        const regex = /(-?[\d.]+::.*?::)|(<[^>]+>)/g
-        const parts = text.split(regex)
+
+        // 먼저 줄 단위로 분리하여 주석 처리
+        const lines = text.split('\n')
 
         return (
             <Fragment>
-                {parts.map((part, i) => {
-                    if (part === undefined) return null
-                    let styleClass = ""
-                    if (/^-?[\d.]+::.*::$/.test(part)) {
-                        styleClass = part.startsWith('-')
-                            ? "bg-sky-500/30 rounded-[2px]"
-                            : "bg-pink-500/30 rounded-[2px]"
-                    } else if (/^<[^>]+>$/.test(part)) {
-                        styleClass = "bg-green-500/30 rounded-[2px]"
+                {lines.map((line, lineIndex) => {
+                    const isComment = line.trimStart().startsWith('#')
+                    const isLastLine = lineIndex === lines.length - 1
+
+                    // 주석 줄인 경우 전체를 회색 배경으로
+                    if (isComment) {
+                        return (
+                            <Fragment key={lineIndex}>
+                                <span className="bg-muted-foreground/20 text-muted-foreground rounded-[2px]">{line}</span>
+                                {!isLastLine && '\n'}
+                            </Fragment>
+                        )
                     }
-                    return <span key={i} className={styleClass}>{part}</span>
+
+                    // 일반 줄: 기존 구문 하이라이팅 적용
+                    // Syntax regex: 
+                    // 1. Weights: 1.2::tag:: OR -0.5::tag::
+                    // 2. Fragments: <fragment>
+                    const regex = /(-?[\d.]+::.*?::)|(<[^>]+>)/g
+                    const parts = line.split(regex)
+
+                    return (
+                        <Fragment key={lineIndex}>
+                            {parts.map((part, i) => {
+                                if (part === undefined) return null
+                                let styleClass = ""
+                                if (/^-?[\d.]+::.*::$/.test(part)) {
+                                    styleClass = part.startsWith('-')
+                                        ? "bg-sky-500/30 rounded-[2px]"
+                                        : "bg-pink-500/30 rounded-[2px]"
+                                } else if (/^<[^>]+>$/.test(part)) {
+                                    styleClass = "bg-green-500/30 rounded-[2px]"
+                                }
+                                return <span key={i} className={styleClass}>{part}</span>
+                            })}
+                            {!isLastLine && '\n'}
+                        </Fragment>
+                    )
                 })}
             </Fragment>
         )

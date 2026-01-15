@@ -86,7 +86,7 @@ export default function Settings() {
     const [appVersion, setAppVersion] = useState('')
     const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
     const { pendingUpdate, isDownloading, setPendingUpdate, setIsDownloading, setDownloadProgress } = useUpdateStore()
-    
+
     // 키바인드 편집 상태
     const [editingAction, setEditingAction] = useState<ShortcutAction | null>(null)
     const [recordedBinding, setRecordedBinding] = useState<KeyBinding | null>(null)
@@ -389,34 +389,34 @@ export default function Settings() {
                                         }
                                         if (!isNewer) return null
                                         return (
-                                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20">
-                                            <div className="flex items-center gap-2">
-                                                <Sparkles className="h-4 w-4 text-green-500" />
-                                                <div>
-                                                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                                                        {t('update.readyToInstall', '업데이트 설치 준비됨')}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        v{pendingUpdate.version}
-                                                    </p>
+                                            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20">
+                                                <div className="flex items-center gap-2">
+                                                    <Sparkles className="h-4 w-4 text-green-500" />
+                                                    <div>
+                                                        <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                                                            {t('update.readyToInstall', '업데이트 설치 준비됨')}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            v{pendingUpdate.version}
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={async () => {
+                                                        try {
+                                                            toast({ title: t('update.installing', '설치 중...'), description: t('update.pleaseWait', '잠시만 기다려주세요') })
+                                                            await installPendingUpdate()
+                                                        } catch (e) {
+                                                            console.error('Install failed:', e)
+                                                            toast({ title: t('update.failed', '설치 실패'), description: String(e), variant: 'destructive' })
+                                                        }
+                                                    }}
+                                                >
+                                                    <Sparkles className="h-4 w-4 mr-1" />
+                                                    {t('update.installNow', '지금 설치')}
+                                                </Button>
                                             </div>
-                                            <Button
-                                                size="sm"
-                                                onClick={async () => {
-                                                    try {
-                                                        toast({ title: t('update.installing', '설치 중...'), description: t('update.pleaseWait', '잠시만 기다려주세요') })
-                                                        await installPendingUpdate()
-                                                    } catch (e) {
-                                                        console.error('Install failed:', e)
-                                                        toast({ title: t('update.failed', '설치 실패'), description: String(e), variant: 'destructive' })
-                                                    }
-                                                }}
-                                            >
-                                                <Sparkles className="h-4 w-4 mr-1" />
-                                                {t('update.installNow', '지금 설치')}
-                                            </Button>
-                                        </div>
                                         )
                                     })()}
                                 </div>
@@ -914,7 +914,7 @@ function ShortcutRow({ action, binding, allBindings, isEditing, recordedBinding,
     const checkConflict = (newBinding: KeyBinding): ShortcutAction | null => {
         for (const [otherAction, otherBinding] of Object.entries(allBindings)) {
             if (otherAction === action) continue // 자기 자신은 제외
-            
+
             // 키 조합이 정확히 같은지 확인
             if (
                 otherBinding.key === newBinding.key &&
@@ -930,13 +930,13 @@ function ShortcutRow({ action, binding, allBindings, isEditing, recordedBinding,
 
     const handleSave = () => {
         if (!recordedBinding) return
-        
+
         const conflict = checkConflict(recordedBinding)
         if (conflict) {
             setConflictAction(conflict)
             return
         }
-        
+
         onSave(recordedBinding)
         setConflictAction(null)
     }
@@ -1021,7 +1021,7 @@ function ShortcutRow({ action, binding, allBindings, isEditing, recordedBinding,
                     )}
                 </div>
             </div>
-            
+
             {/* 충돌 경고 */}
             {conflictAction && recordedBinding && (
                 <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-destructive/10 border border-destructive/20">
@@ -1032,17 +1032,17 @@ function ShortcutRow({ action, binding, allBindings, isEditing, recordedBinding,
                         </span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button 
-                            size="sm" 
-                            variant="ghost" 
+                        <Button
+                            size="sm"
+                            variant="ghost"
                             onClick={() => setConflictAction(null)}
                             className="text-destructive hover:text-destructive"
                         >
                             {t('common.cancel', '취소')}
                         </Button>
-                        <Button 
-                            size="sm" 
-                            variant="destructive" 
+                        <Button
+                            size="sm"
+                            variant="destructive"
                             onClick={handleForceOverride}
                         >
                             {t('settingsPage.shortcuts.override', '덮어쓰기')}
