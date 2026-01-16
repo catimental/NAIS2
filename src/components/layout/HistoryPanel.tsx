@@ -540,16 +540,17 @@ export function HistoryPanel() {
     const handleImageClick = async (image: SavedImage) => {
         let finalDataUrl = imageThumbnails[image.path]
 
-        // Load if missing (unless temporary)
-        if (!finalDataUrl && !image.isTemporary) {
-            try {
-                const data = await readFile(image.path)
-                const base64 = arrayBufferToBase64(data)
-                finalDataUrl = `data:image/png;base64,${base64}`
-                setImageThumbnails(prev => ({ ...prev, [image.path]: finalDataUrl }))
-            } catch (e) {
-                console.error('Failed to load image:', e)
-                return
+        // If we have an asset:// URL or missing data, load as base64 for metadata parsing
+        if (!finalDataUrl || !finalDataUrl.startsWith('data:')) {
+            if (!image.isTemporary) {
+                try {
+                    const data = await readFile(image.path)
+                    const base64 = arrayBufferToBase64(data)
+                    finalDataUrl = `data:image/png;base64,${base64}`
+                } catch (e) {
+                    console.error('Failed to load image:', e)
+                    return
+                }
             }
         }
 
@@ -608,12 +609,12 @@ export function HistoryPanel() {
     const handleLoadMetadata = async (image: SavedImage) => {
         let imageData = imageThumbnails[image.path]
 
-        if (!imageData) {
+        // Always load as base64 for MetadataDialog (asset:// URLs don't work)
+        if (!imageData || !imageData.startsWith('data:')) {
             try {
                 const data = await readFile(image.path)
                 const base64 = arrayBufferToBase64(data)
                 imageData = `data:image/png;base64,${base64}`
-                setImageThumbnails(prev => ({ ...prev, [image.path]: imageData }))
             } catch {
                 return
             }
@@ -645,18 +646,21 @@ export function HistoryPanel() {
             return
         }
 
-        const imageData = imageThumbnails[image.path]
-
-
-        // Use local variable for data to ensure we have it
-        let finalData = imageThumbnails[image.path]
-        if (!finalData && !image.isTemporary) {
+        // Always load as base64 for metadata parsing (asset:// URLs don't work with parseMetadataFromBase64)
+        let finalData: string | undefined
+        if (!image.isTemporary) {
             try {
                 const data = await readFile(image.path)
                 const base64 = arrayBufferToBase64(data)
                 finalData = `data:image/png;base64,${base64}`
-                setImageThumbnails(prev => ({ ...prev, [image.path]: finalData }))
             } catch (e) {
+                console.error('Failed to load image for regenerate:', e)
+                return
+            }
+        } else {
+            finalData = imageThumbnails[image.path]
+            if (finalData && !finalData.startsWith('data:')) {
+                // Can't regenerate from asset:// URL without file path
                 return
             }
         }
@@ -670,7 +674,7 @@ export function HistoryPanel() {
         }
 
         try {
-            const metadata = await parseMetadataFromBase64(imageData)
+            const metadata = await parseMetadataFromBase64(finalData)
             if (!metadata) {
                 toast({
                     title: t('toast.noMetadata', '메타데이터 없음'),
