@@ -31,7 +31,7 @@
         "checkFailed": "アップデート確認失敗",
         "downloadComplete": "ダウンロード完了",
         "readyToInstall": "インストール準備完了",
-        "readyToInstallDesc": "インストール前に作業を保存してください。",
+        "readyToInstallDesc": "インストール前にデータのバックアップを推奨します。作業を保存してから実行してください。",
         "installNow": "今すぐインストール",
         "restart": "再起動"
     },

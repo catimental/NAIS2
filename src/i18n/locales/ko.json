@@ -15,7 +15,7 @@
         "checkFailed": "업데이트 확인 실패",
         "downloadComplete": "다운로드 완료",
         "readyToInstall": "업데이트 설치 준비됨",
-        "readyToInstallDesc": "작업을 저장한 후 설치하세요.",
+        "readyToInstallDesc": "설치 전 데이터 백업을 권장합니다. 작업을 저장한 후 설치하세요.",
         "installNow": "지금 설치",
         "restart": "재시작"
     },

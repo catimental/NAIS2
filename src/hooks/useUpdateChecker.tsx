@@ -77,7 +77,7 @@ export function useUpdateChecker() {
             // Show toast with install option
             toast({
                 title: t('update.downloadComplete', '다운로드 완료'),
-                description: t('update.readyToInstall', '업데이트를 설치할 준비가 되었습니다. 작업을 저장한 후 설치하세요.'),
+                description: t('update.readyToInstallDesc', '설치 전 데이터 백업을 권장합니다. 작업을 저장한 후 설치하세요.'),
                 action: (
                     <Button
                         size="sm"

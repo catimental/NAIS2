@@ -7,5 +7,13 @@
   ; Also kill the main app if running (to ensure clean install/update)
   nsExec::ExecToLog 'taskkill /F /T /IM NAIS2.exe'
   ; Wait for file handles to be released
-  Sleep 1000
+  Sleep 1500
+  
+  ; Disable reboot flag - prevent Windows from requesting restart
+  SetRebootFlag false
+!macroend
+
+!macro NSIS_HOOK_POSTINSTALL
+  ; After installation, ensure no reboot is triggered
+  SetRebootFlag false
 !macroend

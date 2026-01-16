@@ -15,7 +15,7 @@
         "checkFailed": "Update check failed",
         "downloadComplete": "Download Complete",
         "readyToInstall": "Ready to Install",
-        "readyToInstallDesc": "Save your work before installing.",
+        "readyToInstallDesc": "We recommend backing up your data before installing. Save your work first.",
         "installNow": "Install Now",
         "restart": "Restart"
     },
