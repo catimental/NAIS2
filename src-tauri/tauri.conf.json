@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' https: data: blob: asset: https://asset.localhost; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; connect-src 'self' ipc: ipc://localhost ipc://* https: wss: http://ipc.localhost http://127.0.0.1:* data:; frame-src https://* http://localhost:* data:;",
+      "csp": null,
       "assetProtocol": {
         "enable": true,
         "scope": ["**", "$HOME/**", "$PICTURE/**", "$DESKTOP/**", "$DOWNLOAD/**", "$DOCUMENT/**", "$APPDATA/**", "$LOCALAPPDATA/**", "C:/**", "D:/**", "E:/**", "F:/**", "G:/**", "H:/**"]
