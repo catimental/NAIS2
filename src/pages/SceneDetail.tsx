@@ -30,6 +30,7 @@ import { MetadataDialog } from '@/components/metadata/MetadataDialog'
 import { ImageReferenceDialog } from '@/components/metadata/ImageReferenceDialog'
 import { InpaintingDialog } from '@/components/tools/InpaintingDialog'
 import { pictureDir, join } from '@tauri-apps/api/path'
+import { convertFileSrc } from '@tauri-apps/api/core'
 import { exists, readFile, remove } from '@tauri-apps/plugin-fs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from '@/components/ui/use-toast'
@@ -751,28 +752,14 @@ function SceneImageCard({
     const [imgSrc, setImgSrc] = useState<string>('')
 
     useEffect(() => {
-        let active = true
-        const loadImage = async () => {
-            if (!image.url) return
-            if (image.url.startsWith('data:')) {
-                if (active) setImgSrc(image.url)
-                return
-            }
-            try {
-                const data = await readFile(image.url)
-                let binary = ''
-                const len = data.byteLength
-                for (let i = 0; i < len; i++) {
-                    binary += String.fromCharCode(data[i])
-                }
-                const base64 = btoa(binary)
-                if (active) setImgSrc(`data:image/png;base64,${base64}`)
-            } catch (e) {
-                console.error('Failed to load image:', e)
-            }
+        if (!image.url) return
+        if (image.url.startsWith('data:')) {
+            setImgSrc(image.url)
+            return
         }
-        loadImage()
-        return () => { active = false }
+        // Use convertFileSrc for efficient native asset loading
+        // No need for base64 conversion - directly use the asset protocol
+        setImgSrc(convertFileSrc(image.url))
     }, [image.url])
 
     return (

@@ -74,7 +74,8 @@ import { Tip } from '@/components/ui/tooltip'
 import { useSceneStore } from '@/stores/scene-store'
 import { useGenerationStore } from '@/stores/generation-store'
 import { toast } from '@/components/ui/use-toast'
-import { readFile, writeFile } from '@tauri-apps/plugin-fs'
+import { convertFileSrc } from '@tauri-apps/api/core'
+import { writeFile } from '@tauri-apps/plugin-fs'
 import { save } from '@tauri-apps/plugin-dialog'
 import { ExportDialog } from '@/components/scene/ExportDialog'
 import { ResolutionSelector, Resolution } from '@/components/ui/ResolutionSelector'
@@ -726,32 +727,16 @@ const SceneCardItem = memo(function SceneCardItem({ scene, onClick, disabled = f
     const [imageUrl, setImageUrl] = useState<string>('')
 
     useEffect(() => {
-        let active = true
-        const loadImage = async () => {
-            if (!thumbnail) {
-                if (active) setImageUrl('')
-                return
-            }
-            if (thumbnail.startsWith('data:')) {
-                if (active) setImageUrl(thumbnail)
-                return
-            }
-            try {
-                const data = await readFile(thumbnail)
-                const blob = new Blob([data])
-                const reader = new FileReader()
-                reader.onloadend = () => {
-                    if (active && typeof reader.result === 'string') {
-                        setImageUrl(reader.result)
-                    }
-                }
-                reader.readAsDataURL(blob)
-            } catch (e) {
-                console.error('Failed to load scene thumbnail:', e)
-            }
+        if (!thumbnail) {
+            setImageUrl('')
+            return
         }
-        loadImage()
-        return () => { active = false }
+        if (thumbnail.startsWith('data:')) {
+            setImageUrl(thumbnail)
+            return
+        }
+        // Use convertFileSrc for efficient native asset loading
+        setImageUrl(convertFileSrc(thumbnail))
     }, [thumbnail])
 
 

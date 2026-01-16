@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useSceneStore } from '@/stores/scene-store'
 import { readDir, readFile, remove, writeFile, mkdir, exists, BaseDirectory } from '@tauri-apps/plugin-fs'
+import { convertFileSrc } from '@tauri-apps/api/core'
 import { pictureDir, join } from '@tauri-apps/api/path'
 import { Command } from '@tauri-apps/plugin-shell'
 import { save } from '@tauri-apps/plugin-dialog'
@@ -82,24 +83,12 @@ const HistoryImageItem = memo(function HistoryImageItem({
     useEffect(() => {
         if (image.isTemporary) return
         if (!localThumbnail) {
-            let active = true
-            const load = async () => {
-                try {
-                    const data = await readFile(image.path)
-                    if (active) {
-                        const base64 = arrayBufferToBase64(data)
-                        const dataUrl = `data:image/png;base64,${base64}`
-                        setLocalThumbnail(dataUrl)
-                        onLoadComplete(image.path, dataUrl)
-                    }
-                } catch (e) {
-                    // console.warn('Failed to load image lazily:', image.path)
-                }
-            }
-            load()
-            return () => { active = false }
+            // Use convertFileSrc for efficient native asset loading
+            const assetUrl = convertFileSrc(image.path)
+            setLocalThumbnail(assetUrl)
+            onLoadComplete(image.path, assetUrl)
         }
-    }, [image.path, localThumbnail, onLoadComplete])
+    }, [image.path, localThumbnail, onLoadComplete, image.isTemporary])
 
     return (
         <ContextMenu>
