@@ -671,6 +671,8 @@ export const useGenerationStore = create<GenerationState>()(
                 smea: state.smea,
                 smeaDyn: state.smeaDyn,
                 variety: state.variety,
+                qualityToggle: state.qualityToggle,
+                ucPreset: state.ucPreset,
                 // Seed - only save if locked
                 ...(state.seedLocked ? { seed: state.seed } : {}),
                 seedLocked: state.seedLocked,
