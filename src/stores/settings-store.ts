@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { indexedDBStorage } from '@/lib/indexed-db'
 
 export interface CustomResolution {
     id: string
@@ -106,6 +107,7 @@ export const useSettingsStore = create<SettingsState>()(
         }),
         {
             name: 'nais2-settings',
+            storage: createJSONStorage(() => indexedDBStorage),
         }
     )
 )

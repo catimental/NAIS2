@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { indexedDBStorage } from '@/lib/indexed-db'
 import { getUserInfo, verifyToken, type AnlasInfo } from '@/services/novelai-api'
 
 interface AuthState {
@@ -67,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
         }),
         {
             name: 'nais2-auth',
+            storage: createJSONStorage(() => indexedDBStorage),
             partialize: (state) => ({
                 token: state.token,
                 isVerified: state.isVerified,

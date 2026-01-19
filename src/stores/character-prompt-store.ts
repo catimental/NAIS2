@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { indexedDBStorage } from '@/lib/indexed-db'
 
 export interface CharacterPrompt {
     id: string
@@ -342,6 +343,7 @@ export const useCharacterPromptStore = create<CharacterPromptState>()(
         }),
         {
             name: 'nais2-character-prompts',
+            storage: createJSONStorage(() => indexedDBStorage),
             version: 1 // Increment version if needed for migration logic handling in persist (optional)
         }
     )

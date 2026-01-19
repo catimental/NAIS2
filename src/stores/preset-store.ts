@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { useGenerationStore } from './generation-store'
+import { indexedDBStorage } from '@/lib/indexed-db'
 
 export const DEFAULT_PRESET_ID = 'default'
 
@@ -228,6 +229,7 @@ export const usePresetStore = create<PresetState>()(
         }),
         {
             name: 'nais2-presets',
+            storage: createJSONStorage(() => indexedDBStorage),
             // Ensure default preset exists on hydration
             onRehydrateStorage: () => (state) => {
                 if (state && !state.presets.find(p => p.id === DEFAULT_PRESET_ID)) {

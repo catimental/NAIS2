@@ -92,3 +92,49 @@ export async function cleanupLargeData(key: string, maxSizeKB: number = 100): Pr
         return false
     }
 }
+
+/**
+ * localStorage에서 IndexedDB로 데이터 마이그레이션
+ * 기존 localStorage 데이터가 있고 IndexedDB에 없으면 이동
+ * 
+ * CRITICAL: This MUST complete before Zustand stores initialize!
+ */
+export async function migrateFromLocalStorage(keys: string[]): Promise<void> {
+    for (const key of keys) {
+        try {
+            // localStorage에 데이터가 있는지 확인
+            const localData = localStorage.getItem(key)
+            if (!localData) {
+                console.log(`[Migration] ${key}: No localStorage data`)
+                continue
+            }
+
+            // IndexedDB에 이미 데이터가 있는지 확인
+            const indexedData = await indexedDBStorage.getItem(key)
+            if (indexedData) {
+                // 이미 IndexedDB에 데이터 있으면 localStorage 정리만
+                console.log(`[Migration] ${key}: IndexedDB already has data, cleaning localStorage`)
+                localStorage.removeItem(key)
+                continue
+            }
+
+            // localStorage → IndexedDB 마이그레이션
+            console.log(`[Migration] ${key}: Migrating ${localData.length} bytes from localStorage to IndexedDB`)
+            await indexedDBStorage.setItem(key, localData)
+            
+            // 검증: 제대로 저장되었는지 확인
+            const verifyData = await indexedDBStorage.getItem(key)
+            if (verifyData && verifyData.length === localData.length) {
+                // 검증 성공 - localStorage 정리
+                localStorage.removeItem(key)
+                console.log(`[Migration] ${key}: Migration verified and complete`)
+            } else {
+                // 검증 실패 - localStorage 유지 (데이터 손실 방지)
+                console.error(`[Migration] ${key}: Verification failed! Keeping localStorage data`)
+            }
+        } catch (error) {
+            console.error(`[Migration] ${key}: Migration failed, keeping localStorage data`, error)
+            // 실패해도 localStorage 데이터는 유지 - 다음 시작에 다시 시도
+        }
+    }
+}
