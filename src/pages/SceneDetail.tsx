@@ -228,7 +228,8 @@ export default function SceneDetail() {
             incrementQueue(activePresetId, scene.id)
         }
 
-        useSceneStore.getState().setIsGenerating(true)
+        // Start a new generation session to properly track and allow cancellation
+        useSceneStore.getState().startNewGenerationSession()
     }
 
     const handleOpenFolder = async () => {

@@ -74,6 +74,8 @@ interface SceneState {
     // Generation Status
     isGenerating: boolean
     setIsGenerating: (isGenerating: boolean) => void
+    generationSessionId: number  // Incremented on each new generation session to invalidate old ones
+    startNewGenerationSession: () => number  // Returns new session ID
 
     // Streaming State
     streamingSceneId: string | null
@@ -533,7 +535,20 @@ export const useSceneStore = create<SceneState>()(
             },
 
             isGenerating: false,
-            setIsGenerating: (isGenerating) => set({ isGenerating }),
+            setIsGenerating: (isGenerating) => {
+                // When stopping generation, increment session ID to invalidate any in-progress operations
+                if (!isGenerating) {
+                    set({ isGenerating: false, generationSessionId: Date.now() })
+                } else {
+                    set({ isGenerating: true })
+                }
+            },
+            generationSessionId: 0,
+            startNewGenerationSession: () => {
+                const newSessionId = Date.now()
+                set({ generationSessionId: newSessionId, isGenerating: true })
+                return newSessionId
+            },
 
             streamingSceneId: null,
             streamingImage: null,

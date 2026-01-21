@@ -74,6 +74,7 @@ export function PromptPanel() {
     const getTotalQueueCount = useSceneStore(state => state.getTotalQueueCount)
     const sceneIsGenerating = useSceneStore(state => state.isGenerating)
     const setSceneIsGenerating = useSceneStore(state => state.setIsGenerating)
+    const startNewGenerationSession = useSceneStore(state => state.startNewGenerationSession)
     const completedCount = useSceneStore(state => state.completedCount)
     const totalQueuedCount = useSceneStore(state => state.totalQueuedCount)
 
@@ -187,7 +188,12 @@ export function PromptPanel() {
         if (isConflict) return // Prevent action if conflict exists
 
         if (isSceneMode) {
-            setSceneIsGenerating(!sceneIsGenerating)
+            // Toggle scene generation: start new session or cancel
+            if (sceneIsGenerating) {
+                setSceneIsGenerating(false)  // Cancel - just set to false
+            } else {
+                startNewGenerationSession()  // Start - creates new session ID
+            }
             return
         }
 
@@ -196,7 +202,7 @@ export function PromptPanel() {
         } else {
             generate()
         }
-    }, [isConflict, isSceneMode, sceneIsGenerating, setSceneIsGenerating, isGenerating, cancelGeneration, generate])
+    }, [isConflict, isSceneMode, sceneIsGenerating, setSceneIsGenerating, startNewGenerationSession, isGenerating, cancelGeneration, generate])
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden p-2">
