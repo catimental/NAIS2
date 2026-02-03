@@ -52,9 +52,6 @@
             "title": "Batch Complete",
             "desc": "{{count}} images have been generated."
         },
-        "multiInpaintComplete": {
-            "desc": "Multi-character inpainting completed."
-        },
         "errorOccurred": {
             "title": "Error Occurred",
             "desc": "An error occurred during image generation."
@@ -586,26 +583,6 @@
             "open": "Use Inpainting",
             "dropzone": "Upload image to inpaint",
             "generate": "Generate Inpaint"
-        },
-        "multiInpainting": {
-            "title": "Multi-Character Inpainting",
-            "description": "Generate different characters per region. Draw masks with colors and bind characters.",
-            "regions": "Inpaint Regions",
-            "region": "Region",
-            "addRegion": "Add Region",
-            "noRegions": "Add a region on the right",
-            "noRegionsHint": "Add a region to start",
-            "bindPrompt": "Character Prompt",
-            "bindReference": "Reference Image",
-            "selectPrompt": "Select prompt...",
-            "selectRef": "Select reference...",
-            "noBinding": "None",
-            "stageChars": "Stage",
-            "presets": "Presets",
-            "refImage": "Image",
-            "multiMode": "Multi Mode",
-            "multiModeDesc": "Sequential generation per region",
-            "openMulti": "Open Multi-Inpainting"
         }
     },
     "sourcePanel": {

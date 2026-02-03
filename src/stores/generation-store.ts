@@ -74,26 +74,6 @@ interface HistoryItem {
     timestamp: Date
 }
 
-// 다인 인페인팅 영역
-export interface InpaintRegion {
-    id: string
-    colorIndex: number           // 마스크 색상 인덱스 (0-5)
-    maskData: string | null      // 해당 영역의 마스크 (base64)
-    characterPromptId: string | null  // 바인딩된 캐릭터 프롬프트 ID
-    referenceImageId: string | null   // 바인딩된 참조 이미지 ID
-    enabled: boolean
-}
-
-// 다인 인페인팅 색상 팔레트
-export const INPAINT_REGION_COLORS = [
-    { name: 'region1', color: '#22c55e', colorRgba: 'rgba(34, 197, 94, 0.6)' },   // Green
-    { name: 'region2', color: '#ef4444', colorRgba: 'rgba(239, 68, 68, 0.6)' },   // Red
-    { name: 'region3', color: '#3b82f6', colorRgba: 'rgba(59, 130, 246, 0.6)' },  // Blue
-    { name: 'region4', color: '#f59e0b', colorRgba: 'rgba(245, 158, 11, 0.6)' },  // Amber
-    { name: 'region5', color: '#a855f7', colorRgba: 'rgba(168, 85, 247, 0.6)' },  // Purple
-    { name: 'region6', color: '#06b6d4', colorRgba: 'rgba(6, 182, 212, 0.6)' },   // Cyan
-]
-
 export const AVAILABLE_MODELS = [
     { id: 'nai-diffusion-4-5-curated', name: 'NAI Diffusion V4.5 Curated' },
     { id: 'nai-diffusion-4-5-full', name: 'NAI Diffusion V4.5 Full' },
@@ -143,11 +123,6 @@ interface GenerationState {
     noise: number
     mask: string | null
     i2iMode: 'i2i' | 'inpaint' | null
-    
-    // 다인 인페인팅 (Multi-Character Regional Inpainting)
-    multiInpaintEnabled: boolean
-    inpaintRegions: InpaintRegion[]
-    activeRegionIndex: number  // 현재 편집 중인 영역 인덱스
 
     // Timing
     lastGenerationTime: number | null  // ms
@@ -200,14 +175,6 @@ interface GenerationState {
     setMask: (mask: string | null) => void
     setI2IMode: (mode: 'i2i' | 'inpaint' | null) => void
     resetI2IParams: () => void
-
-    // 다인 인페인팅 Actions
-    setMultiInpaintEnabled: (enabled: boolean) => void
-    addInpaintRegion: () => void
-    removeInpaintRegion: (id: string) => void
-    updateInpaintRegion: (id: string, updates: Partial<InpaintRegion>) => void
-    setActiveRegionIndex: (index: number) => void
-    clearInpaintRegions: () => void
 
     // Batch update for preset loading (avoids multiple IndexedDB writes)
     applyPreset: (preset: {
@@ -277,11 +244,6 @@ export const useGenerationStore = create<GenerationState>()(
             noise: 0.0,
             mask: null,
             i2iMode: null,
-            
-            // 다인 인페인팅 초기 상태
-            multiInpaintEnabled: false,
-            inpaintRegions: [],
-            activeRegionIndex: 0,
 
             lastGenerationTime: null,
             estimatedTime: null,
@@ -346,62 +308,7 @@ export const useGenerationStore = create<GenerationState>()(
             setNoise: (v) => set({ noise: v }),
             setMask: (mask) => set({ mask }),
             setI2IMode: (mode) => set({ i2iMode: mode }),
-            resetI2IParams: () => set({ 
-                sourceImage: null, 
-                mask: null, 
-                strength: 0.7, 
-                noise: 0.0, 
-                inpaintingPrompt: '', 
-                i2iMode: null,
-                multiInpaintEnabled: false,
-                inpaintRegions: [],
-                activeRegionIndex: 0
-            }),
-
-            // 다인 인페인팅 Actions
-            setMultiInpaintEnabled: (enabled) => set({ multiInpaintEnabled: enabled }),
-            
-            addInpaintRegion: () => set((state) => {
-                const newIndex = state.inpaintRegions.length
-                if (newIndex >= 6) return state // 최대 6개 영역
-                
-                return {
-                    inpaintRegions: [
-                        ...state.inpaintRegions,
-                        {
-                            id: Date.now().toString(),
-                            colorIndex: newIndex,
-                            maskData: null,
-                            characterPromptId: null,
-                            referenceImageId: null,
-                            enabled: true
-                        }
-                    ],
-                    activeRegionIndex: newIndex
-                }
-            }),
-            
-            removeInpaintRegion: (id) => set((state) => {
-                const filtered = state.inpaintRegions.filter(r => r.id !== id)
-                return {
-                    inpaintRegions: filtered,
-                    activeRegionIndex: Math.min(state.activeRegionIndex, Math.max(0, filtered.length - 1))
-                }
-            }),
-            
-            updateInpaintRegion: (id, updates) => set((state) => ({
-                inpaintRegions: state.inpaintRegions.map(r => 
-                    r.id === id ? { ...r, ...updates } : r
-                )
-            })),
-            
-            setActiveRegionIndex: (index) => set({ activeRegionIndex: index }),
-            
-            clearInpaintRegions: () => set({ 
-                inpaintRegions: [], 
-                activeRegionIndex: 0,
-                multiInpaintEnabled: false 
-            }),
+            resetI2IParams: () => set({ sourceImage: null, mask: null, strength: 0.7, noise: 0.0, inpaintingPrompt: '', i2iMode: null }),
 
             cancelGeneration: () => {
                 const { abortController, seedLocked } = get()
@@ -428,8 +335,7 @@ export const useGenerationStore = create<GenerationState>()(
                     basePrompt, additionalPrompt, detailPrompt, negativePrompt, inpaintingPrompt,
                     model, steps, cfgScale, cfgRescale, sampler, scheduler, smea, smeaDyn, variety,
                     selectedResolution, seed, batchCount, lastGenerationTime,
-                    sourceImage, strength, noise, mask,
-                    multiInpaintEnabled, inpaintRegions
+                    sourceImage, strength, noise, mask
                 } = get()
 
                 const token = useAuthStore.getState().token
@@ -465,273 +371,6 @@ export const useGenerationStore = create<GenerationState>()(
                 })
 
                 try {
-                    // ============================================
-                    // Multi-Character Regional Inpainting Mode
-                    // ============================================
-                    if (multiInpaintEnabled && inpaintRegions.length >= 2 && sourceImage && mask) {
-                        console.log('[Generate] Multi-Character Inpainting Mode: Processing', inpaintRegions.length, 'regions sequentially')
-                        
-                        let currentSourceImage = sourceImage
-                        const { useStreaming, imageFormat } = useSettingsStore.getState()
-                        const { characters: allCharPrompts, presets: charPresets } = useCharacterPromptStore.getState()
-                        const { characterImages: allCharImages } = useCharacterStore.getState()
-                        const enabledCharImages = allCharImages.filter(img => img.enabled !== false)
-                        
-                        const removeComments = (text: string) => text
-                            .split('\n')
-                            .filter(line => !line.trimStart().startsWith('#'))
-                            .join('\n')
-                        
-                        const roundTo64 = (value: number): number => Math.round(value / 64) * 64
-                        
-                        for (let regionIdx = 0; regionIdx < inpaintRegions.length; regionIdx++) {
-                            if (get().isCancelled) break
-                            
-                            const region = inpaintRegions[regionIdx]
-                            if (!region.enabled || !region.maskData) continue
-                            
-                            set({ currentBatch: regionIdx + 1 })
-                            console.log(`[MultiInpaint] Processing region ${regionIdx + 1}/${inpaintRegions.length}`)
-                            
-                            const startTime = Date.now()
-                            
-                            // Build prompt for this region
-                            let regionPrompt = removeComments(basePrompt)
-                            
-                            // Add character prompt if bound
-                            if (region.characterPromptId) {
-                                let boundPrompt = ''
-                                
-                                // Check if it's a preset reference
-                                if (region.characterPromptId.startsWith('preset:')) {
-                                    const presetId = region.characterPromptId.replace('preset:', '')
-                                    const preset = charPresets.find(p => p.id === presetId)
-                                    if (preset) {
-                                        boundPrompt = preset.prompt
-                                    }
-                                } else {
-                                    // Stage character
-                                    const charPrompt = allCharPrompts.find(c => c.id === region.characterPromptId)
-                                    if (charPrompt) {
-                                        boundPrompt = charPrompt.prompt
-                                    }
-                                }
-                                
-                                if (boundPrompt) {
-                                    regionPrompt = [regionPrompt, removeComments(boundPrompt)].filter(Boolean).join(', ')
-                                }
-                            }
-                            
-                            // Add additional, inpainting, detail prompts
-                            let finalPrompt = [
-                                regionPrompt,
-                                removeComments(inpaintingPrompt),
-                                removeComments(additionalPrompt),
-                                removeComments(detailPrompt)
-                            ].filter(Boolean).join(', ')
-                            
-                            // Wildcard processing
-                            finalPrompt = await processWildcards(finalPrompt)
-                            
-                            // Determine which reference images to use for this region
-                            let regionCharImages: typeof enabledCharImages = []
-                            if (region.referenceImageId) {
-                                const boundImg = enabledCharImages.find(img => img.id === region.referenceImageId)
-                                if (boundImg) {
-                                    regionCharImages = [boundImg]
-                                }
-                            }
-                            
-                            // Get image dimensions
-                            let finalWidth = roundTo64(selectedResolution.width)
-                            let finalHeight = roundTo64(selectedResolution.height)
-                            
-                            try {
-                                const img = new Image()
-                                await new Promise<void>((resolve, reject) => {
-                                    img.onload = () => resolve()
-                                    img.onerror = () => reject(new Error('Failed to load source image'))
-                                    img.src = currentSourceImage
-                                })
-                                finalWidth = roundTo64(img.width)
-                                finalHeight = roundTo64(img.height)
-                            } catch (e) {
-                                console.warn('[MultiInpaint] Failed to get image dimensions')
-                            }
-                            
-                            // Use same seed for all regions (consistency)
-                            const currentSeed = seed
-                            
-                            const generationParams = {
-                                prompt: finalPrompt,
-                                negative_prompt: removeComments(negativePrompt),
-                                model,
-                                width: finalWidth,
-                                height: finalHeight,
-                                steps,
-                                cfg_scale: cfgScale,
-                                cfg_rescale: cfgRescale,
-                                sampler,
-                                scheduler,
-                                smea,
-                                smea_dyn: smeaDyn,
-                                variety,
-                                seed: currentSeed,
-                                
-                                // Inpainting
-                                sourceImage: currentSourceImage,
-                                strength,
-                                noise,
-                                mask: region.maskData,
-                                
-                                // Precise Reference for this region only
-                                charImages: regionCharImages.map(img => img.base64),
-                                charStrength: regionCharImages.map(img => img.strength),
-                                charFidelity: regionCharImages.map(img => img.fidelity ?? 0.6),
-                                charReferenceType: regionCharImages.map(img => img.referenceType ?? 'character&style'),
-                                charCacheKeys: regionCharImages.map(img => img.cacheKey || null),
-                                
-                                // No vibe transfer in multi-inpainting mode (for simplicity)
-                                vibeImages: [],
-                                vibeInfo: [],
-                                vibeStrength: [],
-                                preEncodedVibes: [],
-                                
-                                // Character prompts disabled in multi-inpaint (we handle it above)
-                                characterPrompts: [],
-                                characterPositionEnabled: false,
-                                
-                                imageFormat,
-                            }
-                            
-                            set({ streamProgress: 0 })
-                            
-                            let result
-                            const streamMimeType = imageFormat === 'webp' ? 'image/webp' : 'image/png'
-                            
-                            if (useStreaming) {
-                                result = await generateImageStream(token, generationParams, (progress, partialImage) => {
-                                    if (partialImage) {
-                                        set({ streamProgress: progress, previewImage: `data:${streamMimeType};base64,${partialImage}` })
-                                    } else {
-                                        set({ streamProgress: progress })
-                                    }
-                                })
-                            } else {
-                                result = await generateImage(token, generationParams)
-                            }
-                            
-                            set({ streamProgress: 0 })
-                            
-                            if (get().isCancelled) break
-                            
-                            const generationTime = Date.now() - startTime
-                            set({ lastGenerationTime: generationTime })
-                            
-                            if (result.success && result.imageData) {
-                                const mimeType = imageFormat === 'webp' ? 'image/webp' : 'image/png'
-                                const imageUrl = `data:${mimeType};base64,${result.imageData}`
-                                set({ previewImage: imageUrl })
-                                
-                                // Use this result as source for next region
-                                currentSourceImage = imageUrl
-                                
-                                // Update mask to next region's mask (if exists)
-                                const nextRegion = inpaintRegions[regionIdx + 1]
-                                if (nextRegion?.maskData) {
-                                    set({ mask: nextRegion.maskData })
-                                }
-                                
-                                // Only save final result to history and file
-                                if (regionIdx === inpaintRegions.length - 1) {
-                                    // Create thumbnail
-                                    const thumbnail = await createThumbnail(imageUrl)
-                                    
-                                    const historyItem: HistoryItem = {
-                                        id: Date.now().toString(),
-                                        url: thumbnail,
-                                        prompt: finalPrompt,
-                                        seed: currentSeed,
-                                        timestamp: new Date(),
-                                    }
-                                    
-                                    // Save to file
-                                    const { savePath, autoSave, useAbsolutePath } = useSettingsStore.getState()
-                                    
-                                    if (autoSave) {
-                                        try {
-                                            const binaryString = atob(result.imageData)
-                                            const bytes = new Uint8Array(binaryString.length)
-                                            for (let j = 0; j < binaryString.length; j++) {
-                                                bytes[j] = binaryString.charCodeAt(j)
-                                            }
-                                            
-                                            const fileExt = imageFormat === 'webp' ? 'webp' : 'png'
-                                            const fileName = `NAIS_MULTI_${Date.now()}.${fileExt}`
-                                            const outputDir = savePath || 'NAIS_Output'
-                                            
-                                            let fullPath: string
-                                            
-                                            if (useAbsolutePath) {
-                                                const dirExists = await exists(outputDir)
-                                                if (!dirExists) {
-                                                    await mkdir(outputDir, { recursive: true })
-                                                }
-                                                fullPath = await join(outputDir, fileName)
-                                                await writeFile(fullPath, bytes)
-                                            } else {
-                                                const dirExists = await exists(outputDir, { baseDir: BaseDirectory.Picture })
-                                                if (!dirExists) {
-                                                    await mkdir(outputDir, { baseDir: BaseDirectory.Picture })
-                                                }
-                                                await writeFile(`${outputDir}/${fileName}`, bytes, { baseDir: BaseDirectory.Picture })
-                                                const picPath = await pictureDir()
-                                                fullPath = await join(picPath, outputDir, fileName)
-                                            }
-                                            
-                                            window.dispatchEvent(new CustomEvent('newImageGenerated', {
-                                                detail: { path: fullPath, data: imageUrl }
-                                            }))
-                                        } catch (e) {
-                                            console.warn('Multi-inpaint save failed:', e)
-                                        }
-                                    }
-                                    
-                                    set(state => ({
-                                        history: [historyItem, ...state.history].slice(0, 20)
-                                    }))
-                                    
-                                    useAuthStore.getState().refreshAnlas()
-                                }
-                            } else {
-                                toast({
-                                    title: i18n.t('toast.generationFailed.title'),
-                                    description: result.error || i18n.t('toast.unknownError'),
-                                    variant: 'destructive',
-                                })
-                                break
-                            }
-                        }
-                        
-                        // Multi-inpaint complete
-                        if (!get().isCancelled) {
-                            toast({
-                                title: i18n.t('toast.batchComplete.title', '생성 완료'),
-                                description: i18n.t('toast.multiInpaintComplete.desc', '다인 인페인팅이 완료되었습니다.'),
-                            })
-                        }
-                        
-                        // New seed
-                        if (!get().seedLocked) {
-                            set({ seed: Math.floor(Math.random() * 4294967295) })
-                        }
-                        
-                        return // Exit generate() - don't run normal batch loop
-                    }
-                    
-                    // ============================================
-                    // Normal Generation Mode (single/batch)
-                    // ============================================
                     for (let i = 0; i < batchCount; i++) {
                         // Check if cancelled
                         if (get().isCancelled) {

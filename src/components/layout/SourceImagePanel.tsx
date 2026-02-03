@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, Image as ImageIcon, Paintbrush, Minus, Plus, Edit3, Users } from 'lucide-react'
+import { X, Image as ImageIcon, Paintbrush, Minus, Plus, Edit3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
 import { useGenerationStore } from '@/stores/generation-store'
 import { InpaintingDialog } from '@/components/tools/InpaintingDialog'
-import { MultiInpaintingDialog } from '@/components/tools/MultiInpaintingDialog'
 import { Tip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
@@ -18,13 +17,10 @@ export function SourceImagePanel() {
         i2iMode,
         strength, setStrength,
         noise, setNoise,
-        resetI2IParams,
-        multiInpaintEnabled,
-        inpaintRegions
+        resetI2IParams
     } = useGenerationStore()
 
     const [inpaintDialogOpen, setInpaintDialogOpen] = useState(false)
-    const [multiInpaintDialogOpen, setMultiInpaintDialogOpen] = useState(false)
     const [isAnimating, setIsAnimating] = useState(false)
 
     // Don't show if no source image or no mode
@@ -64,22 +60,6 @@ export function SourceImagePanel() {
                         )}
                     </div>
                     <div className="flex items-center gap-1">
-                        {/* Multi-Inpainting Button (only for Inpaint) */}
-                        {isInpaint && (
-                            <Tip content={t('tools.multiInpainting.openMulti', '다인 인페인팅 열기')}>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className={cn(
-                                        "h-6 w-6 rounded-full hover:bg-green-500/20 hover:text-green-400",
-                                        multiInpaintEnabled && inpaintRegions.length > 0 && "bg-green-500/20 text-green-400"
-                                    )}
-                                    onClick={() => setMultiInpaintDialogOpen(true)}
-                                >
-                                    <Users className="h-3.5 w-3.5" />
-                                </Button>
-                            </Tip>
-                        )}
                         {/* Edit Mask Button (only for Inpaint) */}
                         {isInpaint && (
                             <Tip content={t('sourcePanel.editMask', '마스크 영역 편집')}>
@@ -124,16 +104,8 @@ export function SourceImagePanel() {
                                         alt="Mask"
                                         className="absolute inset-0 w-full h-full opacity-50 pointer-events-none"
                                     />
-                                    <div className="absolute top-1 right-1 flex gap-1">
-                                        {multiInpaintEnabled && inpaintRegions.length > 0 && (
-                                            <div className="px-1.5 py-0.5 bg-green-500/80 text-white text-[10px] rounded-md flex items-center gap-1">
-                                                <Users className="h-2.5 w-2.5" />
-                                                {inpaintRegions.length}
-                                            </div>
-                                        )}
-                                        <div className="px-1.5 py-0.5 bg-pink-500/80 text-white text-[10px] rounded-md">
-                                            {t('sourcePanel.maskSet', '마스크 설정됨')}
-                                        </div>
+                                    <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-pink-500/80 text-white text-[10px] rounded-md">
+                                        {t('sourcePanel.maskSet', '마스크 설정됨')}
                                     </div>
                                 </>
                             )}
@@ -187,13 +159,6 @@ export function SourceImagePanel() {
             <InpaintingDialog
                 open={inpaintDialogOpen}
                 onOpenChange={setInpaintDialogOpen}
-                sourceImage={sourceImage}
-            />
-            
-            {/* Multi-Inpainting Dialog */}
-            <MultiInpaintingDialog
-                open={multiInpaintDialogOpen}
-                onOpenChange={setMultiInpaintDialogOpen}
                 sourceImage={sourceImage}
             />
         </>
