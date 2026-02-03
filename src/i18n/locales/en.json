@@ -52,6 +52,9 @@
             "title": "Batch Complete",
             "desc": "{{count}} images have been generated."
         },
+        "multiInpaintComplete": {
+            "desc": "Multi-character inpainting completed."
+        },
         "errorOccurred": {
             "title": "Error Occurred",
             "desc": "An error occurred during image generation."

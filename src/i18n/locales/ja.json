@@ -52,6 +52,9 @@
             "title": "バッチ生成完了",
             "desc": "{{count}}枚の画像生成が完了しました。"
         },
+        "multiInpaintComplete": {
+            "desc": "多人数インペインティングが完了しました。"
+        },
         "errorOccurred": {
             "title": "エラー発生",
             "desc": "画像生成中にエラーが発生しました。"

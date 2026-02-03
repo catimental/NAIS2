@@ -52,6 +52,9 @@
             "title": "배치 생성 완료",
             "desc": "{{count}}개의 이미지 생성이 완료되었습니다."
         },
+        "multiInpaintComplete": {
+            "desc": "다인 인페인팅이 완료되었습니다."
+        },
         "errorOccurred": {
             "title": "오류 발생",
             "desc": "이미지 생성 중 오류가 발생했습니다."
