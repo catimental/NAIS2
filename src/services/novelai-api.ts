@@ -466,7 +466,7 @@ export async function generateImage(
             ...(processedCharImages.length > 0 ? {
                 // 캐시 키가 있는 이미지는 캐시 사용, 없으면 이미지 전송
                 ...(params.charCacheKeys?.some(k => k) ? {
-                    director_reference_images_cached: params.charCacheKeys!.map((key, i) => 
+                    director_reference_images_cached: params.charCacheKeys!.map((key) => 
                         key ? { cache_secret_key: key } : undefined
                     ).filter(Boolean),
                     // 캐시되지 않은 이미지만 전송
@@ -898,7 +898,7 @@ export async function generateImageStream(
         if (processedCharImages.length > 0) {
             // 캐시 키가 있는 이미지는 캐시 사용, 없으면 이미지 전송
             if (params.charCacheKeys?.some(k => k)) {
-                apiParameters.director_reference_images_cached = params.charCacheKeys!.map((key, i) => 
+                apiParameters.director_reference_images_cached = params.charCacheKeys!.map((key) => 
                     key ? { cache_secret_key: key } : undefined
                 ).filter(Boolean)
                 // 캐시되지 않은 이미지만 전송

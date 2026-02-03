@@ -339,6 +339,26 @@
             "open": "인페인팅 사용",
             "dropzone": "이미지를 업로드하여 인페인팅",
             "generate": "인페인팅 생성"
+        },
+        "multiInpainting": {
+            "title": "다인 인페인팅",
+            "description": "영역별로 다른 캐릭터를 생성합니다. 색상별로 마스크를 그리고 캐릭터를 바인딩하세요.",
+            "regions": "인페인트 영역",
+            "region": "영역",
+            "addRegion": "영역 추가",
+            "noRegions": "오른쪽에서 영역을 추가하세요",
+            "noRegionsHint": "영역을 추가하여 시작하세요",
+            "bindPrompt": "캐릭터 프롬프트",
+            "bindReference": "참조 이미지",
+            "selectPrompt": "프롬프트 선택...",
+            "selectRef": "참조 선택...",
+            "noBinding": "없음",
+            "stageChars": "스테이지",
+            "presets": "프리셋",
+            "refImage": "이미지",
+            "multiMode": "다인 모드",
+            "multiModeDesc": "영역별 순차 생성",
+            "openMulti": "다인 인페인팅 열기"
         }
     },
     "sourcePanel": {

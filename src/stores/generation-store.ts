@@ -74,6 +74,26 @@ interface HistoryItem {
     timestamp: Date
 }
 
+// 다인 인페인팅 영역
+export interface InpaintRegion {
+    id: string
+    colorIndex: number           // 마스크 색상 인덱스 (0-5)
+    maskData: string | null      // 해당 영역의 마스크 (base64)
+    characterPromptId: string | null  // 바인딩된 캐릭터 프롬프트 ID
+    referenceImageId: string | null   // 바인딩된 참조 이미지 ID
+    enabled: boolean
+}
+
+// 다인 인페인팅 색상 팔레트
+export const INPAINT_REGION_COLORS = [
+    { name: 'region1', color: '#22c55e', colorRgba: 'rgba(34, 197, 94, 0.6)' },   // Green
+    { name: 'region2', color: '#ef4444', colorRgba: 'rgba(239, 68, 68, 0.6)' },   // Red
+    { name: 'region3', color: '#3b82f6', colorRgba: 'rgba(59, 130, 246, 0.6)' },  // Blue
+    { name: 'region4', color: '#f59e0b', colorRgba: 'rgba(245, 158, 11, 0.6)' },  // Amber
+    { name: 'region5', color: '#a855f7', colorRgba: 'rgba(168, 85, 247, 0.6)' },  // Purple
+    { name: 'region6', color: '#06b6d4', colorRgba: 'rgba(6, 182, 212, 0.6)' },   // Cyan
+]
+
 export const AVAILABLE_MODELS = [
     { id: 'nai-diffusion-4-5-curated', name: 'NAI Diffusion V4.5 Curated' },
     { id: 'nai-diffusion-4-5-full', name: 'NAI Diffusion V4.5 Full' },
@@ -123,6 +143,11 @@ interface GenerationState {
     noise: number
     mask: string | null
     i2iMode: 'i2i' | 'inpaint' | null
+    
+    // 다인 인페인팅 (Multi-Character Regional Inpainting)
+    multiInpaintEnabled: boolean
+    inpaintRegions: InpaintRegion[]
+    activeRegionIndex: number  // 현재 편집 중인 영역 인덱스
 
     // Timing
     lastGenerationTime: number | null  // ms
@@ -175,6 +200,14 @@ interface GenerationState {
     setMask: (mask: string | null) => void
     setI2IMode: (mode: 'i2i' | 'inpaint' | null) => void
     resetI2IParams: () => void
+
+    // 다인 인페인팅 Actions
+    setMultiInpaintEnabled: (enabled: boolean) => void
+    addInpaintRegion: () => void
+    removeInpaintRegion: (id: string) => void
+    updateInpaintRegion: (id: string, updates: Partial<InpaintRegion>) => void
+    setActiveRegionIndex: (index: number) => void
+    clearInpaintRegions: () => void
 
     // Batch update for preset loading (avoids multiple IndexedDB writes)
     applyPreset: (preset: {
@@ -244,6 +277,11 @@ export const useGenerationStore = create<GenerationState>()(
             noise: 0.0,
             mask: null,
             i2iMode: null,
+            
+            // 다인 인페인팅 초기 상태
+            multiInpaintEnabled: false,
+            inpaintRegions: [],
+            activeRegionIndex: 0,
 
             lastGenerationTime: null,
             estimatedTime: null,
@@ -308,7 +346,62 @@ export const useGenerationStore = create<GenerationState>()(
             setNoise: (v) => set({ noise: v }),
             setMask: (mask) => set({ mask }),
             setI2IMode: (mode) => set({ i2iMode: mode }),
-            resetI2IParams: () => set({ sourceImage: null, mask: null, strength: 0.7, noise: 0.0, inpaintingPrompt: '', i2iMode: null }),
+            resetI2IParams: () => set({ 
+                sourceImage: null, 
+                mask: null, 
+                strength: 0.7, 
+                noise: 0.0, 
+                inpaintingPrompt: '', 
+                i2iMode: null,
+                multiInpaintEnabled: false,
+                inpaintRegions: [],
+                activeRegionIndex: 0
+            }),
+
+            // 다인 인페인팅 Actions
+            setMultiInpaintEnabled: (enabled) => set({ multiInpaintEnabled: enabled }),
+            
+            addInpaintRegion: () => set((state) => {
+                const newIndex = state.inpaintRegions.length
+                if (newIndex >= 6) return state // 최대 6개 영역
+                
+                return {
+                    inpaintRegions: [
+                        ...state.inpaintRegions,
+                        {
+                            id: Date.now().toString(),
+                            colorIndex: newIndex,
+                            maskData: null,
+                            characterPromptId: null,
+                            referenceImageId: null,
+                            enabled: true
+                        }
+                    ],
+                    activeRegionIndex: newIndex
+                }
+            }),
+            
+            removeInpaintRegion: (id) => set((state) => {
+                const filtered = state.inpaintRegions.filter(r => r.id !== id)
+                return {
+                    inpaintRegions: filtered,
+                    activeRegionIndex: Math.min(state.activeRegionIndex, Math.max(0, filtered.length - 1))
+                }
+            }),
+            
+            updateInpaintRegion: (id, updates) => set((state) => ({
+                inpaintRegions: state.inpaintRegions.map(r => 
+                    r.id === id ? { ...r, ...updates } : r
+                )
+            })),
+            
+            setActiveRegionIndex: (index) => set({ activeRegionIndex: index }),
+            
+            clearInpaintRegions: () => set({ 
+                inpaintRegions: [], 
+                activeRegionIndex: 0,
+                multiInpaintEnabled: false 
+            }),
 
             cancelGeneration: () => {
                 const { abortController, seedLocked } = get()

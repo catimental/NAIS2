@@ -583,6 +583,26 @@
             "open": "インペインティングを使用",
             "dropzone": "画像をアップロードしてインペイント",
             "generate": "インペイント生成"
+        },
+        "multiInpainting": {
+            "title": "多人数インペインティング",
+            "description": "領域ごとに異なるキャラクターを生成します。色別にマスクを描き、キャラクターをバインドしてください。",
+            "regions": "インペイント領域",
+            "region": "領域",
+            "addRegion": "領域追加",
+            "noRegions": "右側で領域を追加してください",
+            "noRegionsHint": "領域を追加して開始",
+            "bindPrompt": "キャラクタープロンプト",
+            "bindReference": "参照画像",
+            "selectPrompt": "プロンプト選択...",
+            "selectRef": "参照選択...",
+            "noBinding": "なし",
+            "stageChars": "ステージ",
+            "presets": "プリセット",
+            "refImage": "画像",
+            "multiMode": "多人数モード",
+            "multiModeDesc": "領域別順次生成",
+            "openMulti": "多人数インペインティングを開く"
         }
     },
     "sourcePanel": {
