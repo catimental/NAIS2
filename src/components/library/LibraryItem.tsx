@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LibraryItem as LibraryItemType } from '@/stores/library-store'
-import { readFile } from '@tauri-apps/plugin-fs'
+import { convertFileSrc } from '@tauri-apps/api/core'
 import { LibraryContextMenu } from './LibraryContextMenu'
 import { cn } from '@/lib/utils'
 import { Check, Square, Layers } from 'lucide-react'
@@ -25,30 +25,15 @@ export function LibraryItem({ item, className, isOverlay, onRename, onAddRef, on
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
-        let active = true
-        const loadImage = async () => {
-            try {
-                const data = await readFile(item.path)
-
-                // Convert to base64 safely without stack overflow
-                let binary = ''
-                const len = data.byteLength
-                for (let i = 0; i < len; i++) {
-                    binary += String.fromCharCode(data[i])
-                }
-                const base64 = btoa(binary)
-
-                if (active) {
-                    setImageUrl(`data:image/png;base64,${base64}`)
-                    setIsLoading(false)
-                }
-            } catch (e) {
-                console.error('Failed to load library image:', e)
-                if (active) setIsLoading(false)
-            }
+        // Use convertFileSrc for efficient native asset URL (no Base64 memory overhead)
+        try {
+            const assetUrl = convertFileSrc(item.path)
+            setImageUrl(assetUrl)
+            setIsLoading(false)
+        } catch (e) {
+            console.error('Failed to create asset URL:', e)
+            setIsLoading(false)
         }
-        loadImage()
-        return () => { active = false }
     }, [item.path])
 
     const handleClick = (e: React.MouseEvent) => {

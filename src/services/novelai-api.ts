@@ -598,8 +598,15 @@ export async function generateImage(
                 const getImageDimensions = async (base64: string): Promise<{ width: number; height: number }> => {
                     return new Promise((resolve, reject) => {
                         const img = new Image()
-                        img.onload = () => resolve({ width: img.width, height: img.height })
-                        img.onerror = reject
+                        img.onload = () => {
+                            const result = { width: img.width, height: img.height }
+                            img.src = '' // Free memory
+                            resolve(result)
+                        }
+                        img.onerror = (e) => {
+                            img.src = '' // Free memory
+                            reject(e)
+                        }
                         img.src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`
                     })
                 }
@@ -963,8 +970,15 @@ export async function generateImageStream(
                 const getImageDimensions = async (base64: string): Promise<{ width: number; height: number }> => {
                     return new Promise((resolve, reject) => {
                         const img = new Image()
-                        img.onload = () => resolve({ width: img.width, height: img.height })
-                        img.onerror = reject
+                        img.onload = () => {
+                            const result = { width: img.width, height: img.height }
+                            img.src = '' // Free memory
+                            resolve(result)
+                        }
+                        img.onerror = (e) => {
+                            img.src = '' // Free memory
+                            reject(e)
+                        }
                         img.src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`
                     })
                 }

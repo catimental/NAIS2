@@ -102,6 +102,10 @@ export function ExportDialog({ open, onOpenChange, activePresetName, scenes }: E
                             // To get Blob from canvas
                             finalBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, mimeType, q))
                         }
+                        // Free memory
+                        canvas.width = 0
+                        canvas.height = 0
+                        bitmap.close()
                     }
 
                     if (finalBlob) {
