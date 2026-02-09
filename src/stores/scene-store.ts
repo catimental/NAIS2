@@ -430,8 +430,8 @@ export const useSceneStore = create<SceneState>()(
                     isFavorite: false,
                 }
                 
-                // MEMORY OPTIMIZATION: Limit images per scene to prevent OOM
-                const MAX_IMAGES_PER_SCENE = 100
+                // MEMORY OPTIMIZATION: Increased limit for heavy users (was 100)
+                const MAX_IMAGES_PER_SCENE = 2000
                 
                 set(state => ({
                     presets: state.presets.map(p =>
@@ -441,18 +441,23 @@ export const useSceneStore = create<SceneState>()(
                                 scenes: p.scenes.map(s => {
                                     if (s.id !== sceneId) return s
                                     
-                                    // Add new image and limit total count
+                                    // Add new image at the beginning (newest first)
                                     let updatedImages = [newImage, ...s.images]
                                     
                                     // If over limit, remove oldest non-favorites
                                     if (updatedImages.length > MAX_IMAGES_PER_SCENE) {
-                                        // Separate favorites and non-favorites
+                                        // Sort by timestamp descending to keep newest
+                                        // Favorites are preserved separately
                                         const favorites = updatedImages.filter(img => img.isFavorite)
-                                        const nonFavorites = updatedImages.filter(img => !img.isFavorite)
+                                        const nonFavorites = updatedImages
+                                            .filter(img => !img.isFavorite)
+                                            .sort((a, b) => b.timestamp - a.timestamp)
                                         
                                         // Keep all favorites + newest non-favorites up to limit
                                         const keepCount = Math.max(0, MAX_IMAGES_PER_SCENE - favorites.length)
+                                        // Merge back and sort by timestamp to maintain display order
                                         updatedImages = [...favorites, ...nonFavorites.slice(0, keepCount)]
+                                            .sort((a, b) => b.timestamp - a.timestamp)
                                         
                                         console.warn(`[SceneStore] Scene ${s.name}: Trimmed to ${updatedImages.length} images (limit: ${MAX_IMAGES_PER_SCENE})`)
                                     }
@@ -964,8 +969,9 @@ export const useSceneStore = create<SceneState>()(
             name: 'nais2-scenes',
             storage: createJSONStorage(() => indexedDBStorage),
             partialize: (state) => {
-                // MEMORY OPTIMIZATION: Limit images per scene during persistence
-                const MAX_IMAGES_PERSIST = 50 // 저장 시에는 더 적게
+                // MEMORY OPTIMIZATION: Higher limit for persistence (was 50)
+                // Images are stored as file paths, not base64 - storage is minimal
+                const MAX_IMAGES_PERSIST = 2000
                 
                 return {
                     // Exclude queueCount from persistence for faster UI updates
@@ -974,13 +980,17 @@ export const useSceneStore = create<SceneState>()(
                         scenes: p.scenes.map(s => ({
                             ...s,
                             queueCount: 0,
-                            // Limit stored images - keep favorites first, then newest
+                            // Limit stored images - keep favorites first, then newest (sorted by timestamp)
                             images: (() => {
                                 if (s.images.length <= MAX_IMAGES_PERSIST) return s.images
                                 const favorites = s.images.filter(img => img.isFavorite)
-                                const nonFavorites = s.images.filter(img => !img.isFavorite)
+                                const nonFavorites = s.images
+                                    .filter(img => !img.isFavorite)
+                                    .sort((a, b) => b.timestamp - a.timestamp)
                                 const keepCount = Math.max(0, MAX_IMAGES_PERSIST - favorites.length)
+                                // Merge and sort by timestamp for consistent display order
                                 return [...favorites, ...nonFavorites.slice(0, keepCount)]
+                                    .sort((a, b) => b.timestamp - a.timestamp)
                             })()
                         }))
                     })),

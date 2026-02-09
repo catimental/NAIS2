@@ -527,16 +527,27 @@ function filterLargeImageData(key: string, data: unknown): unknown {
 
 /**
  * Export all wildcard content from separate IndexedDB
+ * Fixed: Race condition where getAllRequest might complete before handler is attached
  */
 async function exportWildcardContent(): Promise<{ [id: string]: string[] }> {
     return new Promise((resolve, reject) => {
+        // Add timeout to prevent infinite waiting
+        const timeout = setTimeout(() => {
+            console.error('[Backup] Wildcard export timed out after 30s')
+            resolve({}) // Return empty instead of rejecting to allow backup to continue
+        }, 30000)
+        
         const request = indexedDB.open('nais2-wildcard-content', 1)
         
-        request.onerror = () => reject(request.error)
+        request.onerror = () => {
+            clearTimeout(timeout)
+            reject(request.error)
+        }
         
         request.onsuccess = () => {
             const db = request.result
             if (!db.objectStoreNames.contains('contents')) {
+                clearTimeout(timeout)
                 resolve({})
                 return
             }
@@ -547,21 +558,37 @@ async function exportWildcardContent(): Promise<{ [id: string]: string[] }> {
             const getAllKeysRequest = store.getAllKeys()
             
             const result: { [id: string]: string[] } = {}
+            let keys: string[] = []
+            let values: string[][] = []
+            let keysReady = false
+            let valuesReady = false
             
-            getAllKeysRequest.onsuccess = () => {
-                getAllRequest.onsuccess = () => {
-                    const keys = getAllKeysRequest.result as string[]
-                    const values = getAllRequest.result as string[][]
-                    
+            const tryResolve = () => {
+                if (keysReady && valuesReady) {
+                    clearTimeout(timeout)
                     for (let i = 0; i < keys.length; i++) {
                         result[keys[i]] = values[i]
                     }
-                    
                     resolve(result)
                 }
             }
             
-            transaction.onerror = () => reject(transaction.error)
+            getAllKeysRequest.onsuccess = () => {
+                keys = getAllKeysRequest.result as string[]
+                keysReady = true
+                tryResolve()
+            }
+            
+            getAllRequest.onsuccess = () => {
+                values = getAllRequest.result as string[][]
+                valuesReady = true
+                tryResolve()
+            }
+            
+            transaction.onerror = () => {
+                clearTimeout(timeout)
+                reject(transaction.error)
+            }
         }
         
         request.onupgradeneeded = (event) => {

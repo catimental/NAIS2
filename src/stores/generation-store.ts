@@ -322,13 +322,18 @@ export const useGenerationStore = create<GenerationState>()(
                 // Create new AbortController and session ID
                 const abortController = new AbortController()
                 const sessionId = Date.now()
+                
+                // MEMORY: Clear previous preview image before starting new generation
+                // This helps GC reclaim the previous base64 data (~3-5MB per image)
                 set({
                     isGenerating: true,
                     generatingMode: 'main',
                     isCancelled: false,
                     abortController,
                     generationSessionId: sessionId,
-                    estimatedTime: lastGenerationTime ? lastGenerationTime * batchCount : null
+                    estimatedTime: lastGenerationTime ? lastGenerationTime * batchCount : null,
+                    previewImage: null, // Clear previous preview to free memory
+                    streamProgress: 0,  // Reset streaming progress
                 })
 
                 try {
