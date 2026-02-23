@@ -207,6 +207,7 @@ export function CharacterSettingsDialog({ open, onOpenChange }: { open?: boolean
                             <SafeSlider
                                 label={t('characterDialog.vibeStrength', '강도 (Reference Strength)')}
                                 value={[img.strength]}
+                                max={2}
                                 onValueCommit={([v]) => onUpdate(img.id, { strength: v })}
                             />
                         </div>
@@ -321,12 +322,14 @@ export function CharacterSettingsDialog({ open, onOpenChange }: { open?: boolean
                             <SafeSlider
                                 label={t('characterDialog.strength', '강도 (Strength)')}
                                 value={[img.strength]}
+                                max={2}
                                 onValueCommit={([v]) => onUpdate(img.id, { strength: v })}
                             />
                             {/* Fidelity - Slider */}
                             <SafeSlider
                                 label={t('characterDialog.fidelity', '충실도 (Fidelity)')}
                                 value={[img.fidelity ?? 0.6]}
+                                max={2}
                                 onValueCommit={([v]) => onUpdate(img.id, { fidelity: v })}
                             />
                         </div>

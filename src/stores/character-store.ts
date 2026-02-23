@@ -11,8 +11,8 @@ export interface ReferenceImage {
     enabled: boolean // 활성화/비활성화 (새로 추가)
     encodedVibe?: string  // Pre-encoded vibe data from PNG metadata (skips /ai/encode-vibe API)
     informationExtracted: number // 0 to 1 (Vibe Transfer용)
-    strength: number // 0 to 1 - 참조 레퍼런스의 Strength
-    fidelity: number // 0 to 1 - 참조 레퍼런스의 Fidelity
+    strength: number // 0 to 2 - 참조 레퍼런스의 Strength
+    fidelity: number // 0 to 2 - 참조 레퍼런스의 Fidelity
     referenceType: PreciseReferenceType // 참조 타입 (character/style/character&style)
     cacheKey?: string // 서버 캐시 키 (이미지 재전송 방지)
 }
