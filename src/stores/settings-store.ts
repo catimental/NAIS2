@@ -27,7 +27,8 @@ interface SettingsState {
 
     // Generation settings
     useStreaming: boolean  // Use streaming API for image generation
-    generationDelay: number  // Delay between batch generations in ms (0-5000)
+    generationDelayMin: number  // min delay image generations in ms (0-500)
+    generationDelayMax: number  // max delay image generation in ms (0-500)
 
     // Gemini API settings
     geminiApiKey: string
@@ -50,7 +51,7 @@ interface SettingsState {
     setDetailPromptCollapsed: (collapsed: boolean) => void
     setNegativePromptCollapsed: (collapsed: boolean) => void
     setUseStreaming: (useStreaming: boolean) => void
-    setGenerationDelay: (delay: number) => void
+    setGenerationDelay: (min: number, max: number) => void
     setGeminiApiKey: (key: string) => void
     setLibraryPath: (path: string, useAbsolute?: boolean) => void
     setImageFormat: (format: 'png' | 'webp') => void
@@ -69,7 +70,8 @@ export const useSettingsStore = create<SettingsState>()(
             detailPromptCollapsed: false, // Default: expanded
             negativePromptCollapsed: false, // Default: expanded
             useStreaming: true, // Default: enabled
-            generationDelay: 500, // Default: 500ms delay between batch generations
+            generationDelayMin: 0, // Default: 0ms min delay
+            generationDelayMax: 500, // Default: 500ms max delay
             geminiApiKey: '', // Default: empty
             libraryPath: 'NAIS_Library', // Default: relative to Pictures folder
             useAbsoluteLibraryPath: false, // Default: relative to Pictures folder
@@ -97,7 +99,10 @@ export const useSettingsStore = create<SettingsState>()(
             setDetailPromptCollapsed: (collapsed) => set({ detailPromptCollapsed: collapsed }),
             setNegativePromptCollapsed: (collapsed) => set({ negativePromptCollapsed: collapsed }),
             setUseStreaming: (useStreaming) => set({ useStreaming }),
-            setGenerationDelay: (delay) => set({ generationDelay: Math.max(0, Math.min(5000, delay)) }),
+            setGenerationDelay: (min, max) => set({
+                generationDelayMin: Math.max(0, Math.min(500, min)),
+                generationDelayMax: Math.max(0, Math.min(500, Math.max(min, max))),
+            }),
             setGeminiApiKey: (key) => set({ geminiApiKey: key }),
             setLibraryPath: (libraryPath, useAbsolute) => set({
                 libraryPath,

@@ -337,7 +337,7 @@ export const useGenerationStore = create<GenerationState>()(
                 // Create new AbortController and session ID
                 const abortController = new AbortController()
                 const sessionId = Date.now()
-                
+
                 // MEMORY: Clear previous preview image before starting new generation
                 // This helps GC reclaim the previous base64 data (~3-5MB per image)
                 set({
@@ -347,7 +347,7 @@ export const useGenerationStore = create<GenerationState>()(
                     abortController,
                     generationSessionId: sessionId,
                     estimatedTime: lastGenerationTime ? lastGenerationTime * batchCount : null,
-                    previewImage: null, // Clear previous preview to free memory
+                        previewImage: null, // Clear previous preview to free memory
                     streamProgress: 0,  // Reset streaming progress
                 })
 
@@ -640,9 +640,10 @@ export const useGenerationStore = create<GenerationState>()(
                             }
 
                             // Apply generation delay between batches (not after the last one)
-                            const { generationDelay } = useSettingsStore.getState()
-                            if (i < batchCount - 1 && generationDelay > 0) {
-                                await new Promise(resolve => setTimeout(resolve, generationDelay))
+                            const { generationDelayMin, generationDelayMax } = useSettingsStore.getState()
+                            if (i < batchCount - 1 && generationDelayMax > 0) {
+                                const delay = Math.random() * (generationDelayMax - generationDelayMin) + generationDelayMin
+                                await new Promise(resolve => setTimeout(resolve, delay))
                             }
                         } else {
                             toast({

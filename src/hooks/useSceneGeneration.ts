@@ -377,9 +377,10 @@ export function useSceneGeneration() {
 
                 // Apply generation delay only if there are more scenes
                 if (hasMoreScenes) {
-                    const { generationDelay } = useSettingsStore.getState()
-                    if (generationDelay > 0) {
-                        await new Promise(resolve => setTimeout(resolve, generationDelay))
+                    const { generationDelayMin, generationDelayMax } = useSettingsStore.getState()
+                    if (generationDelayMax > 0) {
+                        const delay = Math.random() * (generationDelayMax - generationDelayMin) + generationDelayMin
+                        await new Promise(resolve => setTimeout(resolve, delay))
                     }
                 }
 

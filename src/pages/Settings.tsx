@@ -77,7 +77,7 @@ export default function Settings() {
     const { t, i18n } = useTranslation()
     const { theme, setTheme } = useThemeStore()
     const { token, isVerified, anlas, isLoading, verifyAndSave } = useAuthStore()
-    const { savePath, autoSave, setSavePath, setAutoSave, promptFontSize, setPromptFontSize, useStreaming, setUseStreaming, generationDelay, setGenerationDelay, geminiApiKey, setGeminiApiKey, useAbsolutePath, libraryPath, useAbsoluteLibraryPath, setLibraryPath, imageFormat, setImageFormat } = useSettingsStore()
+    const { savePath, autoSave, setSavePath, setAutoSave, promptFontSize, setPromptFontSize, useStreaming, setUseStreaming, generationDelayMin, generationDelayMax, setGenerationDelay, geminiApiKey, setGeminiApiKey, useAbsolutePath, libraryPath, useAbsoluteLibraryPath, setLibraryPath, imageFormat, setImageFormat } = useSettingsStore()
     const { bindings, enabled: shortcutsEnabled, setBinding, resetBinding, resetAllBindings, setEnabled: setShortcutsEnabled } = useShortcutStore()
     const [localGeminiKey, setLocalGeminiKey] = useState(geminiApiKey)
 
@@ -388,18 +388,34 @@ export default function Settings() {
                                             <Timer className="h-4 w-4 text-blue-500" />
                                             {t('settingsPage.generationDelay.title', 'Generation Delay')}
                                         </label>
-                                        <span className="text-sm text-muted-foreground">{generationDelay}ms</span>
+                                        <span className="text-sm text-muted-foreground">{generationDelayMin}ms ~ {generationDelayMax}ms</span>
                                     </div>
-                                    <Slider
-                                        value={[generationDelay]}
-                                        onValueChange={([v]) => setGenerationDelay(v)}
-                                        min={0}
-                                        max={5000}
-                                        step={100}
-                                        className="w-full"
-                                    />
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground w-8">Min</span>
+                                            <Slider
+                                                value={[generationDelayMin]}
+                                                onValueChange={([v]) => setGenerationDelay(v, generationDelayMax)}
+                                                min={0}
+                                                max={500}
+                                                step={10}
+                                                className="flex-1"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground w-8">Max</span>
+                                            <Slider
+                                                value={[generationDelayMax]}
+                                                onValueChange={([v]) => setGenerationDelay(generationDelayMin, v)}
+                                                min={0}
+                                                max={500}
+                                                step={10}
+                                                className="flex-1"
+                                            />
+                                        </div>
+                                    </div>
                                     <p className="text-xs text-muted-foreground">
-                                        {t('settingsPage.generationDelay.description', 'Delay between batch image generations to avoid API rate limits.')}
+                                        {t('settingsPage.generationDelay.description', 'Random delay between batch generations (min ~ max).')}
                                     </p>
                                 </div>
 
