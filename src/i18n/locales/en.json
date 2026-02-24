@@ -494,7 +494,7 @@
         },
         "generationDelay": {
             "title": "Generation Delay",
-            "description": "Delay between batch generations to prevent API overload"
+            "description": "Random delay between batch generations (min ~ max)"
         },
         "version": {
             "title": "Version",

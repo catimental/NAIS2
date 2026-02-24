@@ -494,7 +494,7 @@
         },
         "generationDelay": {
             "title": "生成遅延",
-            "description": "バッチ生成時のAPI過負荷防止のための遅延"
+            "description": "バッチ生成時のランダム遅延（最小〜最大）"
         },
         "version": {
             "title": "バージョン",
